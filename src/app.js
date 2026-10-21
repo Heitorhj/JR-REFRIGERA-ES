@@ -7,7 +7,9 @@ const { criarAuthMiddleware } = require('./middleware/auth');
 const { naoEncontrado, tratadorDeErros } = require('./middleware/errorHandler');
 const { criarRotasAuth } = require('./routes/auth');
 const { criarRotasPublicas } = require('./routes/publico');
+const { criarRotasAdmin } = require('./routes/admin');
 const { criarServicoPedidos } = require('./services/pedidos');
+const { criarServicoAdmin } = require('./services/admin');
 
 /**
  * Fábrica da aplicação Express. Recebe o banco e a configuração para
@@ -26,6 +28,7 @@ function createApp({ db, config }) {
   const limitadores = criarLimitadores(config.rateLimit);
   const autenticar = criarAuthMiddleware({ db, jwtSecret: config.jwtSecret });
   const servicoPedidos = criarServicoPedidos(db);
+  const servicoAdmin = criarServicoAdmin(db);
 
   app.get('/api/saude', (_req, res) => res.json({ status: 'ok' }));
 
@@ -50,6 +53,9 @@ function createApp({ db, config }) {
       limitadorPedido: limitadores.pedido,
     }),
   );
+
+  // RF03 — painel administrativo protegido
+  app.use('/api/admin', criarRotasAdmin({ servicoAdmin, autenticar }));
 
   app.use(naoEncontrado);
   app.use(tratadorDeErros);

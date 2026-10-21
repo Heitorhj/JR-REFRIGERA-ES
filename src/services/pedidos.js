@@ -33,6 +33,10 @@ function serializarPedido(row) {
     taxa_deslocamento_final: fromCents(taxaFinal),
     nova_data: row.nova_data,
     novo_turno: row.novo_turno,
+    agendamento: {
+      data: row.nova_data || row.data_preferida,
+      turno: row.novo_turno || row.turno_preferido,
+    },
     motivo: row.motivo,
     descartado_em: row.descartado_em,
     criado_em: row.criado_em,
