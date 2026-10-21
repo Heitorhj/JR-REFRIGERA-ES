@@ -6,11 +6,8 @@ import errorHandler from "./errors/errorHandler.js";
 
 const app = express();
 
-// import cidadeRoutes from "./routes/cidade.routes.js";
-// import servicoRoutes from "./routes/servico.routes.js";
-// import pedidoRoutes from "./routes/pedido.routes.js";
-// import adminRoutes from "./routes/admin.routes.js";
 
+import servicoRoutes from "./routes/servico.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 
 // Middlewares globais
@@ -27,10 +24,7 @@ app.use(helmet());
 // ===================================
 
 app.use("/api/auth", authRoutes);
-// app.use("/api/cidades", cidadeRoutes);
-// app.use("/api/servicos", servicoRoutes);
-// app.use("/api/pedidos", pedidoRoutes);
-// app.use("/api/admin", adminRoutes);
+app.use("/api/servicos", servicoRoutes);
 
 // ===================================
 // RATE LIMITING - Refatoraremos depois
