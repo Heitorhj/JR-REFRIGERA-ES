@@ -71,14 +71,14 @@ async function main() {
   }
 
   // Cria o administrador somente se não existir
-  const adminExistente = await prisma.usuario.findUnique({
+  const adminExistente = await prisma.administrador.findUnique({
     where: { email },
   });
 
   if (!adminExistente) {
     const senhaHash = await bcrypt.hash(senha, BCRYPT_ROUNDS);
 
-    await prisma.usuario.create({
+    await prisma.administrador.create({
       data: {
         nome: "Júnior",
         email,
