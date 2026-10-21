@@ -6,6 +6,8 @@ const { criarLimitadores } = require('./middleware/rateLimiters');
 const { criarAuthMiddleware } = require('./middleware/auth');
 const { naoEncontrado, tratadorDeErros } = require('./middleware/errorHandler');
 const { criarRotasAuth } = require('./routes/auth');
+const { criarRotasPublicas } = require('./routes/publico');
+const { criarServicoPedidos } = require('./services/pedidos');
 
 /**
  * Fábrica da aplicação Express. Recebe o banco e a configuração para
@@ -23,6 +25,7 @@ function createApp({ db, config }) {
 
   const limitadores = criarLimitadores(config.rateLimit);
   const autenticar = criarAuthMiddleware({ db, jwtSecret: config.jwtSecret });
+  const servicoPedidos = criarServicoPedidos(db);
 
   app.get('/api/saude', (_req, res) => res.json({ status: 'ok' }));
 
@@ -36,6 +39,15 @@ function createApp({ db, config }) {
       jwtExpiresIn: config.jwtExpiresIn,
       limitadorLogin: limitadores.login,
       autenticar,
+    }),
+  );
+
+  app.use(
+    '/api',
+    criarRotasPublicas({
+      db,
+      servicoPedidos,
+      limitadorPedido: limitadores.pedido,
     }),
   );
 
