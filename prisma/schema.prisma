@@ -2,8 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -11,3 +10,120 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Administrador {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  senhaHash String
+  criadoEm  DateTime @default(now())
+
+  historicos HistoricoStatus[]
+}
+
+model Cidade {
+  id               Int     @id @default(autoincrement())
+  nome             String  @unique
+  nivel            Int
+  regiao           String
+  taxaDeslocamento Int
+  ativa            Boolean @default(true)
+
+  pedidos Pedido[]
+}
+
+//slug é tipo uma TAG para identificar o servico
+model Servico {
+  id        Int     @id @default(autoincrement())
+  slug      String  @unique
+  nome      String
+  descricao String
+  ativo     Boolean @default(true)
+
+  pedidos Pedido[]
+}
+
+model Cliente {
+  id       Int      @id @default(autoincrement())
+  nome     String
+  whatsapp String   @unique
+  criadoEm DateTime @default(now())
+
+  pedidos Pedido[]
+}
+
+model Pedido {
+  id Int @id @default(autoincrement())
+
+  clienteId Int
+  servicoId Int
+  cidadeId  Int
+
+  endereco          String
+  descricaoProblema String
+  dataPreferida     String
+  turnoPreferido    Turno
+
+  status StatusPedido @default(PENDENTE)
+
+  valorPrevisto            Int?
+  taxaDeslocamentoEstimada Int
+  taxaDeslocamentoFinal    Int?
+
+  descartadoEm DateTime?
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+
+  cliente Cliente @relation(fields: [clienteId], references: [id])
+  servico Servico @relation(fields: [servicoId], references: [id])
+  cidade  Cidade  @relation(fields: [cidadeId], references: [id])
+
+  reagendamentos Reagendamento[]
+
+  historicos HistoricoStatus[]
+
+  @@index([status])
+  @@index([descartadoEm])
+}
+
+model Reagendamento {
+  id        Int      @id @default(autoincrement())
+  pedidoId  Int
+  novaData  String
+  novoTurno Turno
+  motivo    String?
+  aceito    Boolean?
+  criadoEm  DateTime @default(now())
+
+  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@index([pedidoId])
+}
+
+model HistoricoStatus {
+  id              Int           @id @default(autoincrement())
+  pedidoId        Int
+  administradorId Int?
+  statusAnterior  StatusPedido?
+  statusNovo      StatusPedido
+  observacao      String?
+  criadoEm        DateTime      @default(now())
+
+  pedido        Pedido         @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  administrador Administrador? @relation(fields: [administradorId], references: [id], onDelete: SetNull)
+
+  @@index([pedidoId])
+}
+
+enum Turno {
+  MANHA
+  TARDE
+}
+
+enum StatusPedido {
+  PENDENTE
+  ACEITO_POR_JUNIOR
+  REAGENDADO
+  CONFIRMADO
+  CANCELADO
+  RECUSADO
+}
