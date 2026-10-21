@@ -1,66 +1,49 @@
-const express = require('express');
-const helmet = require('helmet');
-const cors = require('cors');
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import errorHandler from "./errors/errorHandler.js";
 
-const { criarLimitadores } = require('./middleware/rateLimiters');
-const { criarAuthMiddleware } = require('./middleware/auth');
-const { naoEncontrado, tratadorDeErros } = require('./middleware/errorHandler');
-const { criarRotasAuth } = require('./routes/auth');
-const { criarRotasPublicas } = require('./routes/publico');
-const { criarRotasAdmin } = require('./routes/admin');
-const { criarServicoPedidos } = require('./services/pedidos');
-const { criarServicoAdmin } = require('./services/admin');
+const app = express();
 
-/**
- * Fábrica da aplicação Express. Recebe o banco e a configuração para
- * facilitar os testes (banco em memória, limites customizados).
- */
-function createApp({ db, config }) {
-  const app = express();
 
-  if (config.trustProxy) app.set('trust proxy', 1);
-  app.disable('x-powered-by');
+import {
+    servicoRoutes,
+    adminServicoRoutes
+} from "./routes/servico.routes.js";
 
-  app.use(helmet());
-  app.use(cors({ origin: config.corsOrigin }));
-  app.use(express.json({ limit: '10kb' }));
 
-  const limitadores = criarLimitadores(config.rateLimit);
-  const autenticar = criarAuthMiddleware({ db, jwtSecret: config.jwtSecret });
-  const servicoPedidos = criarServicoPedidos(db);
-  const servicoAdmin = criarServicoAdmin(db);
+import authRoutes from "./routes/auth.routes.js";
 
-  app.get('/api/saude', (_req, res) => res.json({ status: 'ok' }));
+// Middlewares globais
+app.use(express.json());
 
-  app.use('/api', limitadores.geral);
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || "http://localhost:5173"
+}));
 
-  app.use(
-    '/api/auth',
-    criarRotasAuth({
-      db,
-      jwtSecret: config.jwtSecret,
-      jwtExpiresIn: config.jwtExpiresIn,
-      limitadorLogin: limitadores.login,
-      autenticar,
-    }),
-  );
+app.use(helmet());
 
-  app.use(
-    '/api',
-    criarRotasPublicas({
-      db,
-      servicoPedidos,
-      limitadorPedido: limitadores.pedido,
-    }),
-  );
+// ===================================
+// ROTAS 
+// ===================================
 
-  // RF03 — painel administrativo protegido
-  app.use('/api/admin', criarRotasAdmin({ servicoAdmin, autenticar }));
+app.use("/api/auth", authRoutes);
+app.use("/api/servicos", servicoRoutes);
+app.use("/api/admin/servicos", adminServicoRoutes);
 
-  app.use(naoEncontrado);
-  app.use(tratadorDeErros);
+// ===================================
+// RATE LIMITING - Refatoraremos depois
+// ===================================
 
-  return app;
-}
+// app.use("/api", limitadorGeral);
 
-module.exports = { createApp };
+// ===================================
+// TRATAMENTO DE ERROS - Depois
+// ===================================
+
+// app.use(naoEncontrado);
+// app.use(tratadorDeErros);
+app.use(errorHandler);
+
+export default app;

@@ -1,25 +1,23 @@
-const env = require('./config/env');
-const { createDb } = require('./db/connection');
-const { createApp } = require('./app');
-const { expurgarDescartados, agendarExpurgo } = require('./jobs/expurgo');
+import "dotenv/config";
+import app from "./app.js";
+import prisma from "./db/prisma.js";
 
-const db = createDb(env.dbPath);
-const app = createApp({ db, config: env });
+const PORT = Number(process.env.PORT) || 3333;
 
-// Limpa o que ficou vencido enquanto o servidor estava parado e agenda a rotina diária
-expurgarDescartados(db, { retencaoDias: env.retencaoDias });
-const tarefaExpurgo = agendarExpurgo(db, { retencaoDias: env.retencaoDias });
+async function iniciarServidor() {
+  try {
+    await prisma.$connect();
 
-const server = app.listen(env.port, () => {
-  console.log(`JR Refrigerações API rodando na porta ${env.port} (${env.nodeEnv})`);
-});
+    console.log("Banco de dados conectado com sucesso!");
 
-function encerrar() {
-  tarefaExpurgo.stop();
-  server.close(() => {
-    db.close();
-    process.exit(0);
-  });
+    app.listen(PORT, () => {
+      console.log(`Servidor rodando em http://localhost:${PORT}`);
+    });
+
+  } catch (error) {
+    console.error("Erro ao iniciar o servidor:", error);
+    process.exit(1);
+  }
 }
-process.on('SIGINT', encerrar);
-process.on('SIGTERM', encerrar);
+
+iniciarServidor();
