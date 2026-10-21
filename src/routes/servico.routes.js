@@ -13,12 +13,20 @@ servicoRoutes.get(
     servicoController.listar
 );
 
-// Administrativas
+// Cadastrar serviço — administrador
 adminServicoRoutes.post(
     "/",
     loginRequired,
     servicoValidator.ValidarCriarServico,
     servicoController.CriarServico
+);
+
+// Desativar serviço — administrador
+adminServicoRoutes.patch(
+    "/:id/desativar",
+    loginRequired,
+    servicoValidator.ValidarDesativarServico,
+    servicoController.DesativarServico
 );
 
 export {

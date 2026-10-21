@@ -26,6 +26,17 @@ const buscarPorSlug = async (slug) => {
     });
 };
 
+const buscarPorId = async (id) => {
+    return prisma.servico.findUnique({
+        where: {
+            id
+        },
+        select: {
+            id: true
+        }
+    });
+};
+
 const CriarServico = async (nome, slug, descricao) => {
     return prisma.servico.create({
         data: {
@@ -36,8 +47,21 @@ const CriarServico = async (nome, slug, descricao) => {
     });
 };
 
+const DesativarServico = async (id) => {
+    return prisma.servico.update({
+        where: {
+            id
+        },
+        data: {
+            ativo: false
+        }
+    });
+};
+
 export default {
     listarAtivos,
     buscarPorSlug,
-    CriarServico
+    buscarPorId,
+    CriarServico,
+    DesativarServico
 };

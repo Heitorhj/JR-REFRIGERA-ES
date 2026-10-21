@@ -59,6 +59,22 @@ const ValidarCriarServico = (req, res, next) => {
 
 }
 
+const ValidarDesativarServico = (req, res, next) => {
+    const servicoId = Number(req.params.id);
+
+    if (!Number.isSafeInteger(servicoId) || servicoId <= 0) {
+        return res.status(400).json({
+            mensagem: "ID do serviço inválido."
+        });
+    }
+
+    req.params.id = servicoId;
+
+    return next();
+};
+
+
 export default {
-    ValidarCriarServico
+    ValidarCriarServico,
+    ValidarDesativarServico
 }

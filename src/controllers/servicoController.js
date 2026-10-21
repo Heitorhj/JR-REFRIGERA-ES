@@ -32,7 +32,22 @@ const CriarServico = async (req, res, next) => {
     }
 };
 
+const DesativarServico = async (req, res, next) => {
+    try {
+        const id = req.params.id;
+
+        await servicoService.DesativarServico(id);
+
+        return res.status(200).json({
+            mensagem: "Serviço desativado com sucesso."
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 export default {
     listar,
-    CriarServico
+    CriarServico,
+    DesativarServico
 };

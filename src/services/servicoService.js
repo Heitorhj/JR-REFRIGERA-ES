@@ -23,6 +23,16 @@ class ServicoService {
 
         return novoServico;
     }
+
+    async DesativarServico(id) {
+        const servico = await servicoRepository.buscarPorId(id);
+
+        if (!servico) {
+            throw new AppError("Serviço não encontrado.", 404);
+        }
+
+        await servicoRepository.DesativarServico(id);
+    }
 }
 
 export default new ServicoService();
