@@ -17,7 +17,7 @@ const CriarServico = async (req, res, next) => {
     try {
         const { nome, slug, descricao } = req.body;
 
-        const servico = await servicoService.CriarServico(
+        const servico = await servicoService.criar(
             nome,
             slug,
             descricao

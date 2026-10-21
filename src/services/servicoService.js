@@ -1,30 +1,28 @@
-
 import servicoRepository from "../repositories/servicoRepository.js";
 import AppError from "../errors/AppError.js";
 
-const listar = async () => {
-    const servicos = await servicoRepository.listarAtivos();
+class ServicoService {
+    async listar() {
+        const servicos = await servicoRepository.listarAtivos();
 
-    return servicos;
-};
-
-const CriarServico = async (nome, slug, descricao) => {
-    const servicoExistente = await servicoRepository.buscarPorSlug(slug);
-
-    if (servicoExistente) {
-        throw new AppError("Já existe um serviço com esse slug.", 409);
+        return servicos;
     }
 
-    const novoServico = await servicoRepository.CriarServico(
-        nome,
-        slug,
-        descricao
-    );
+    async criar(nome, slug, descricao) {
+        const servicoExistente = await servicoRepository.buscarPorSlug(slug);
 
-    return novoServico;
-};
+        if (servicoExistente) {
+            throw new AppError("Já existe um serviço com esse slug.", 409);
+        }
 
-export default {
-    listar,
-    CriarServico
-};
+        const novoServico = await servicoRepository.CriarServico(
+            nome,
+            slug,
+            descricao
+        );
+
+        return novoServico;
+    }
+}
+
+export default new ServicoService();
