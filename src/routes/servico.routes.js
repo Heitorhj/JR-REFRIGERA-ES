@@ -1,12 +1,27 @@
 import { Router } from "express";
 
 import servicoController from "../controllers/servicoController.js";
+import servicoValidator from "../validators/servicoValidator.js";
+import loginRequired from "../middleware/loginRequired.js";
 
-const router = Router();
+const servicoRoutes = Router();
+const adminServicoRoutes = Router();
 
-router.get(
+// Públicas
+servicoRoutes.get(
     "/",
     servicoController.listar
 );
 
-export default router;
+// Administrativas
+adminServicoRoutes.post(
+    "/",
+    loginRequired,
+    servicoValidator.ValidarCriarServico,
+    servicoController.CriarServico
+);
+
+export {
+    servicoRoutes,
+    adminServicoRoutes
+};

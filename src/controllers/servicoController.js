@@ -8,12 +8,31 @@ const listar = async (req, res, next) => {
             mensagem: "Serviços listados com sucesso.",
             servicos
         });
+    } catch (error) {
+        return next(error);
+    }
+};
 
+const CriarServico = async (req, res, next) => {
+    try {
+        const { nome, slug, descricao } = req.body;
+
+        const servico = await servicoService.CriarServico(
+            nome,
+            slug,
+            descricao
+        );
+
+        return res.status(201).json({
+            mensagem: "Serviço cadastrado com sucesso.",
+            servico
+        });
     } catch (error) {
         return next(error);
     }
 };
 
 export default {
-    listar
+    listar,
+    CriarServico
 };

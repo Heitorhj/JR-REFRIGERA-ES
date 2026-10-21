@@ -24,7 +24,16 @@ const validarSenha = (senha) => {
     return null;
 };
 
+const validarTextoObrigatorio = (valor, campo) => {
+    if(typeof valor !== "string" || valor.trim() === "") {
+        return `O campo ${campo} é obrigatório.`
+    }
+
+    return null;
+}
+
 export default {
     validarEmail,
-    validarSenha
+    validarSenha,
+    validarTextoObrigatorio
 };

@@ -7,7 +7,12 @@ import errorHandler from "./errors/errorHandler.js";
 const app = express();
 
 
-import servicoRoutes from "./routes/servico.routes.js";
+import {
+    servicoRoutes,
+    adminServicoRoutes
+} from "./routes/servico.routes.js";
+
+
 import authRoutes from "./routes/auth.routes.js";
 
 // Middlewares globais
@@ -25,6 +30,7 @@ app.use(helmet());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/servicos", servicoRoutes);
+app.use("/api/admin/servicos", adminServicoRoutes);
 
 // ===================================
 // RATE LIMITING - Refatoraremos depois
