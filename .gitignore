@@ -5,3 +5,5 @@ data/*.db-shm
 data/*.db-wal
 *.log
 .DS_Store
+
+/src/generated/prisma
