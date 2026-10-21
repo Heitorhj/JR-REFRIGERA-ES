@@ -12,7 +12,6 @@ function configPadrao(sobrescrever = {}) {
     jwtExpiresIn: '1h',
     corsOrigin: ['http://localhost:5173'],
     trustProxy: false,
-    whatsappTecnico: '5581999999999',
     retencaoDias: 7,
     rateLimit: { geralMax: 10000, loginMax: 10000, pedidoMax: 10000 },
     ...sobrescrever,

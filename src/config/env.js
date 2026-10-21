@@ -24,7 +24,6 @@ const env = {
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean),
-  whatsappTecnico: (process.env.WHATSAPP_TECNICO || '').replace(/\D/g, ''),
   retencaoDias: int(process.env.RETENCAO_DIAS, 7),
   trustProxy: process.env.TRUST_PROXY === 'true',
   rateLimit: {
