@@ -5,6 +5,11 @@ import helmet from "helmet";
 
 const app = express();
 
+import cidadeRoutes from "./routes/cidade.routes.js";
+import servicoRoutes from "./routes/servico.routes.js";
+import pedidoRoutes from "./routes/pedido.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+
 // Middlewares globais
 app.use(express.json());
 
@@ -15,14 +20,14 @@ app.use(cors({
 app.use(helmet());
 
 // ===================================
-// ROTAS - Implementaremos depois
+// ROTAS 
 // ===================================
 
-// app.use("/api/auth", authRoutes);
-// app.use("/api/pedidos", pedidoRoutes);
-// app.use("/api/servicos", servicoRoutes);
-// app.use("/api/cidades", cidadeRoutes);
-// app.use("/api/admin", adminRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/cidades", cidadeRoutes);
+app.use("/api/servicos", servicoRoutes);
+app.use("/api/pedidos", pedidoRoutes);
+app.use("/api/admin", adminRoutes);
 
 // ===================================
 // RATE LIMITING - Refatoraremos depois
