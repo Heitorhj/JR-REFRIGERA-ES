@@ -21,14 +21,36 @@ model Administrador {
 }
 
 model Cidade {
-  id               Int     @id @default(autoincrement())
-  nome             String  @unique
-  nivel            Int
-  regiao           String
-  taxaDeslocamento Int
-  ativa            Boolean @default(true)
+  id     Int     @id @default(autoincrement())
+  nome   String  @unique
+  nivel  Int
+  regiao String
+  ativa  Boolean @default(true)
 
+  // Cada cidade pertence a um nível de deslocamento.
+  // O próprio campo "nivel" funciona como chave estrangeira
+  taxaDeslocamento TaxaDeslocamento @relation(fields: [nivel], references: [nivel], onDelete: Restrict, onUpdate: Restrict)
+
+  // Pedidos associados à cidade.
+  // Alterar o nível da cidade NÃO modifica taxas de pedidos antigos.
   pedidos Pedido[]
+
+  @@index([nivel])
+}
+
+model TaxaDeslocamento {
+  id Int @id @default(autoincrement())
+
+  // Identificador único do nível de atendimento.
+  // Exemplo: 0 = base, 1 = próximo, 2 = intermediário, 3 = distante.
+  nivel Int @unique
+
+  // Valor vigente da taxa em centavos.
+  // Exemplo: 3000 significa R$ 30,00.
+  valor Int
+
+  // Um nível pode ser utilizado por várias cidades.
+  cidades Cidade[]
 }
 
 //slug é tipo uma TAG para identificar o servico
