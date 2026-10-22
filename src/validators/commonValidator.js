@@ -32,8 +32,21 @@ const validarTextoObrigatorio = (valor, campo) => {
     return null;
 }
 
+const validarId = (req, res, next) => {
+    const id = Number(req.params.id);
+
+    if (!Number.isSafeInteger(id) || id <= 0) {
+        return res.status(400).json({
+            mensagem: "ID inválido."
+        });
+    }
+
+    return next();
+};
+
 export default {
     validarEmail,
     validarSenha,
-    validarTextoObrigatorio
+    validarTextoObrigatorio,
+    validarId
 };

@@ -1,3 +1,4 @@
+import { object } from "zod";
 import commonValidator from "./commonValidator.js";
 
 const validarCadastroCidades = (req, res, next) => {
@@ -49,19 +50,97 @@ const validarCadastroCidades = (req, res, next) => {
     return next();
 }
 
-const validarId = (req, res, next) => {
-    const id = Number(req.params.id);
+const validarEdicao = (req, res, next) => {
+    const { nome, nivel, regiao } = req.body ?? {};
 
-    if (!Number.isSafeInteger(id) || id <= 0) {
+    // No PATCH, permitimos editar somente estes campos.
+    const camposPermitidos = ["nome", "nivel", "regiao"];
+    const camposRecebidos = Object.keys(req.body ?? {});
+
+    // Identifica se foi enviado algum campo que não pode ser alterado.
+    const camposInvalidos = camposRecebidos.filter(
+        (campo) => !camposPermitidos.includes(campo)
+    );
+
+    if (camposInvalidos.length > 0) {
         return res.status(400).json({
-            mensagem: "ID da cidade inválido."
+            mensagem: `Campos não permitidos para edição: ${camposInvalidos.join(", ")}.`
         });
     }
+
+    // Pelo menos um campo precisa ser enviado para atualização.
+    if (
+        nome === undefined &&
+        nivel === undefined &&
+        regiao === undefined
+    ) {
+        return res.status(400).json({
+            mensagem: "Informe pelo menos um campo para atualizar."
+        });
+    }
+
+    // Validar nome somente se foi enviado.
+    if (nome !== undefined) {
+        if (typeof nome !== "string" || !nome.trim()) {
+            return res.status(400).json({
+                mensagem: "Nome da cidade inválido."
+            });
+        }
+
+        if (nome.trim().length > 50) {
+            return res.status(400).json({
+                mensagem: "Nome da cidade muito longo."
+            });
+        }
+    }
+
+    // Validar região somente se foi enviada.
+    if (regiao !== undefined) {
+        if (typeof regiao !== "string" || !regiao.trim()) {
+            return res.status(400).json({
+                mensagem: "Região inválida."
+            });
+        }
+
+        if (regiao.trim().length > 100) {
+            return res.status(400).json({
+                mensagem: "Região muito longa."
+            });
+        }
+    }
+
+    // Validar nível somente se foi enviado.
+    if (nivel !== undefined) {
+        if (!Number.isInteger(nivel) || nivel < 0 || nivel > 4) {
+            return res.status(400).json({
+                mensagem: "O nível deve ser um número inteiro entre 0 e 4."
+            });
+        }
+    }
+
+    // Dados validados e normalizados.
+    // Aqui reconstruímos o body somente com os campos enviados,
+    // já validados e prontos para seguir para o controller/service.
+    const bodyNormalizado = {};
+
+    if (nome !== undefined) {
+        bodyNormalizado.nome = nome.trim().toLowerCase();
+    }
+
+    if (regiao !== undefined) {
+        bodyNormalizado.regiao = regiao.trim();
+    }
+
+    if (nivel !== undefined) {
+        bodyNormalizado.nivel = nivel;
+    }
+
+    req.body = bodyNormalizado;
 
     return next();
 };
 
 export default {
     validarCadastroCidades,
-    validarId
+    validarEdicao
 };

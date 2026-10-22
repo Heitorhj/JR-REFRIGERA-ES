@@ -62,7 +62,11 @@ const cadastrarCidade = async ( nome, nivel, regiao ) => {
         // Retorna a cidade cadastrada junto com os
         // dados da taxa de deslocamento relacionada.
         include: {
-            taxaDeslocamento: true
+            taxaDeslocamento: {
+                select: {
+                    valor: true
+                }
+            }
         }
     });
 };
@@ -78,10 +82,65 @@ const desativarCidade = async (id) => {
     });
 };
 
+const reativarCidade = async (id) => {
+    return prisma.cidade.update({
+        where: {
+            id
+        },
+        data: {
+            ativa: true
+        },
+        include: {
+            taxaDeslocamento: {
+                select: {
+                    valor: true
+                }
+            }
+        }
+    });
+};
+
+// Editar os dados de uma cidade
+const editarCidade = async (id, dados) => {
+    // Copia os dados já validados, filtrados e normalizados.
+    const dadosAtualizacao = { ...dados };
+
+    // Se o nível foi enviado, atualizamos o relacionamento
+    // com a configuração de taxa de deslocamento existente.
+    if (dadosAtualizacao.nivel !== undefined) {
+        const nivel = dadosAtualizacao.nivel;
+
+        // Remove o nível do objeto porque ele será atualizado
+        // através do relacionamento Prisma (connect).
+        delete dadosAtualizacao.nivel;
+
+        dadosAtualizacao.taxaDeslocamento = {
+            connect: {
+                nivel
+            }
+        };
+    }
+
+    return prisma.cidade.update({
+        where: {
+            id
+        },
+        data: dadosAtualizacao,
+        include: {
+            taxaDeslocamento: {
+                select: {
+                    valor: true
+                }
+            }
+        }
+    });
+};
+
 export default {
     listarCidadesAtivas,
     buscarPorNome,
     buscarPorId,
     cadastrarCidade,
-    desativarCidade
+    desativarCidade,
+    reativarCidade
 };
