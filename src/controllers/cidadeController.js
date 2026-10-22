@@ -13,6 +13,27 @@ const listarCidades = async (req, res, next) => {
     }
 };
 
+const cadastrarCidades = async (req, res, next) => {
+    try {
+        const { nome, nivel, regiao } = req.body;
+
+        const cidade = await cidadeService.cadastrarCidades(
+            nome,
+            nivel,
+            regiao
+        );
+
+        return res.status(201).json({
+            mensagem: "Cidade cadastrada com sucesso.",
+            cidade
+        });
+
+    } catch (error) {
+        return next(error);
+    }
+};
+
 export default {
-    listarCidades
+    listarCidades,
+    cadastrarCidades
 }
