@@ -142,5 +142,6 @@ export default {
     buscarPorId,
     cadastrarCidade,
     desativarCidade,
-    reativarCidade
+    reativarCidade,
+    editarCidade
 };
