@@ -12,6 +12,8 @@ import {
     adminServicoRoutes
 } from "./routes/servico.routes.js";
 
+import cidadeRoutes from "./routes/cidades.routes.js";
+
 
 import authRoutes from "./routes/auth.routes.js";
 
@@ -31,6 +33,9 @@ app.use(helmet());
 app.use("/api/auth", authRoutes);
 app.use("/api/servicos", servicoRoutes);
 app.use("/api/admin/servicos", adminServicoRoutes);
+app.use("/api/cidades", cidadeRoutes.cidadeRoutes);
+app.use("/api/admin/cidades", cidadeRoutes.adminCidadeRoutes)
+
 
 // ===================================
 // RATE LIMITING - Refatoraremos depois
