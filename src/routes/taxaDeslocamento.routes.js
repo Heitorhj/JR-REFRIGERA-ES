@@ -6,6 +6,12 @@ import taxaDeslocamentoController from "../controllers/taxaDeslocamentoControlle
 
 const router = Router();
 
+router.get(
+    "/",
+    loginRequired,
+    taxaDeslocamentoController.listarTaxas
+);
+
 router.post(
     "/",
     loginRequired,

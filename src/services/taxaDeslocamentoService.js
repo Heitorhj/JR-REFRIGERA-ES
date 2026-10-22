@@ -4,6 +4,10 @@ import AppError from "../errors/AppError.js";
 
 class TaxaDeslocamentoService {
 
+    async listarTaxas() {
+        return await taxaDeslocamentoRepository.listarTaxas();
+    }
+
     async cadastrar( nivel, valor ) {
         const taxaExistente = await taxaDeslocamentoRepository.buscarPorNivel(nivel);
 
