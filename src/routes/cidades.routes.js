@@ -22,6 +22,13 @@ adminCidadeRoutes.post(
     cidadeController.cadastrarCidades
 );
 
+adminCidadeRoutes.patch(
+    "/:id/desativar",
+    loginRequired,
+    cidadeValidator.validarId,
+    cidadeController.desativarCidade
+);
+
 export  {
     cidadeRoutes,
     adminCidadeRoutes

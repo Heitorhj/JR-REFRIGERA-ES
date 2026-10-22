@@ -49,6 +49,19 @@ const validarCadastroCidades = (req, res, next) => {
     return next();
 }
 
+const validarId = (req, res, next) => {
+    const id = Number(req.params.id);
+
+    if (!Number.isSafeInteger(id) || id <= 0) {
+        return res.status(400).json({
+            mensagem: "ID da cidade inválido."
+        });
+    }
+
+    return next();
+};
+
 export default {
     validarCadastroCidades,
-}
+    validarId
+};

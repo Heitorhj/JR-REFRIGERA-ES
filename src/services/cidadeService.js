@@ -9,7 +9,7 @@ class cidadeService {
         return cidades;
     }
 
-    async cadastrarCidades(nome, nivel, regiao) {
+    async cadastrarCidade(nome, nivel, regiao) {
         // Verifica se a cidade já está cadastrada
         const cidadeExistente = await cidadeRepository.buscarPorNome(nome);
 
@@ -31,13 +31,27 @@ class cidadeService {
         }
 
         // Cadastra a cidade associada ao nível informado
-        const novaCidade = await cidadeRepository.cadastrar(
+        const novaCidade = await cidadeRepository.cadastrarCidade(
             nome,
             nivel,
             regiao
         );
 
         return novaCidade;
+    }
+
+    async desativarCidade(id) {
+        const cidade = await cidadeRepository.buscarPorId(id);
+
+        if (!cidade) {
+            throw new AppError("Cidade não encontrada.", 404);
+        }
+
+        if (!cidade.ativa) {
+            throw new AppError("A cidade já está desativada.", 409);
+        }
+
+        return cidadeRepository.desativarCidade(id);
     }
 }
 

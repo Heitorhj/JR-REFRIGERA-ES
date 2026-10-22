@@ -30,8 +30,16 @@ const buscarPorNome = async (nome) => {
     });
 }
 
+const buscarPorId = async (id) => {
+    return prisma.cidade.findUnique({
+        where: {
+            id
+        }
+    });
+};
+
 // Cadastrar uma cidade e associá-la a uma taxa de deslocamento existente
-const cadastrar = async ( nome, nivel, regiao ) => {
+const cadastrarCidade = async ( nome, nivel, regiao ) => {
     return prisma.cidade.create({
         data: {
             nome: nome,
@@ -59,8 +67,21 @@ const cadastrar = async ( nome, nivel, regiao ) => {
     });
 };
 
+const desativarCidade = async (id) => {
+    return prisma.cidade.update({
+        where: {
+            id
+        },
+        data: {
+            ativa: false
+        }
+    });
+};
+
 export default {
     listarCidadesAtivas,
     buscarPorNome,
-    cadastrar
+    buscarPorId,
+    cadastrarCidade,
+    desativarCidade
 };

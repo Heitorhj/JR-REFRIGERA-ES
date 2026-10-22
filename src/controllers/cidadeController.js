@@ -17,7 +17,7 @@ const cadastrarCidades = async (req, res, next) => {
     try {
         const { nome, nivel, regiao } = req.body;
 
-        const cidade = await cidadeService.cadastrarCidades(
+        const cidade = await cidadeService.cadastrarCidade(
             nome,
             nivel,
             regiao
@@ -33,7 +33,22 @@ const cadastrarCidades = async (req, res, next) => {
     }
 };
 
+const desativarCidade = async (req, res, next) => {
+    try {
+        const id = Number(req.params.id);
+        const cidade = await cidadeService.desativarCidade(id);
+
+        return res.status(200).json({
+            mensagem: "Cidade desativada com sucesso.",
+            cidade
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 export default {
     listarCidades,
-    cadastrarCidades
+    cadastrarCidades,
+    desativarCidade
 }
