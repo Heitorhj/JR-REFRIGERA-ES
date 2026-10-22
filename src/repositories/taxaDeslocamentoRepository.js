@@ -30,8 +30,26 @@ const cadastrar = async ( nivel, valor ) => {
     });
 };
 
+// Editar o valor de uma taxa de deslocamento
+const editarTaxa = async (nivel, valor) => {
+    return prisma.taxaDeslocamento.update({
+        where: {
+            nivel: nivel
+        },
+        data: {
+            valor: valor
+        },
+        select: {
+            id: true,
+            nivel: true,
+            valor: true
+        }
+    });
+};
+
 export default {
     listarTaxas,
     buscarPorNivel,
-    cadastrar
+    cadastrar,
+    editarTaxa
 };

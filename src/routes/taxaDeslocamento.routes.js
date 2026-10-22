@@ -19,4 +19,11 @@ router.post(
     taxaDeslocamentoController.cadastrar
 );
 
+router.patch(
+    "/:nivel",
+    loginRequired,
+    taxaDeslocamentoValidator.validarEdicao,
+    taxaDeslocamentoController.editarTaxa
+);
+
 export default router;

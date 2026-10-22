@@ -32,7 +32,28 @@ const cadastrar = async (req, res, next) => {
     }
 };
 
+// Editar o valor de uma taxa de deslocamento
+const editarTaxa = async (req, res, next) => {
+    try {
+        // O Validator já validou o nível (0 a 4) e o valor em centavos.
+        const nivel = Number(req.params.nivel);
+        const { valor } = req.body;
+
+        // Encaminha os dados para o Service aplicar as regras de negócio.
+        const taxa = await taxaDeslocamentoService.editarTaxa(nivel, valor);
+
+        return res.status(200).json({
+            mensagem: "Taxa de deslocamento atualizada com sucesso.",
+            taxa
+        });
+
+    } catch (error) {
+        return next(error);
+    }
+};
+
 export default {
     listarTaxas,
-    cadastrar
+    cadastrar,
+    editarTaxa
 };
