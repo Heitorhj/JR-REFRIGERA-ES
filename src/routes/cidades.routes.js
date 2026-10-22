@@ -12,7 +12,7 @@ cidadeRoutes.get(
     cidadeController.listarCidades
 );
 
-export default {
+export  {
     cidadeRoutes,
     adminCidadeRoutes
 }
