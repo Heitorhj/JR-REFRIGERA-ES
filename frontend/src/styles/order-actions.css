@@ -1,0 +1,69 @@
+.order-actions {
+  margin-top: 18px;
+  border-top: 1px solid #edf1ef;
+  padding-top: 17px;
+}
+
+.order-actions > h3 {
+  margin: 0 0 12px;
+  color: #49645d;
+  font-size: 0.77rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action-buttons .button,
+.action-form .button {
+  min-height: 39px;
+  border-radius: 10px;
+  padding: 0 13px;
+  font-size: 0.76rem;
+}
+
+.button-secondary {
+  border-color: var(--color-line);
+  color: var(--color-primary-dark);
+  background: #fff;
+}
+
+.button-secondary:hover { background: var(--color-primary-soft); }
+
+.button-danger {
+  border-color: #edd7d4;
+  color: #9c493f;
+  background: #fff4f2;
+}
+
+.button-danger:hover { background: #fee9e5; }
+
+.button-whatsapp {
+  color: #fff;
+  background: #25845e;
+}
+
+.button-whatsapp:hover { background: #1c704e; }
+
+.action-form {
+  display: grid;
+  gap: 13px;
+  margin-top: 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 13px;
+  padding: 15px;
+  background: #f8fbf9;
+}
+
+.action-form h4 { margin: 0; font-size: 0.92rem; }
+.action-form > p { margin: 0; color: var(--color-muted); font-size: 0.77rem; }
+.action-form-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+
+@media (max-width: 560px) {
+  .action-buttons { display: grid; grid-template-columns: 1fr; }
+  .action-buttons .button { width: 100%; }
+}

@@ -1,0 +1,29 @@
+.feedback-message {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+  border: 1px solid;
+  border-radius: 12px;
+  padding: 13px 16px;
+}
+
+.feedback-error {
+  color: var(--color-danger);
+  border-color: #efcfcb;
+  background: #fff4f2;
+}
+
+.feedback-success {
+  color: #176449;
+  border-color: #c9e6d7;
+  background: #f0faf4;
+}
+
+.feedback-message button {
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font-size: 1.2rem;
+}

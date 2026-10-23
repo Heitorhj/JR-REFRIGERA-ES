@@ -1,0 +1,21 @@
+.home-cta {
+  display: flex;
+  width: min(1200px, calc(100% - 64px));
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  margin: 0 auto;
+  border-radius: 26px;
+  padding: 42px 48px;
+  background: #eaf3ef;
+}
+
+.home-cta > div { max-width: 660px; }
+.home-cta h2 {
+  margin: 12px 0;
+  color: var(--color-ink);
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+  letter-spacing: -0.055em;
+  line-height: 1.1;
+}
+.home-cta p { font-size: 0.92rem; }

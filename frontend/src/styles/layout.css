@@ -1,0 +1,19 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+.screen-message {
+  flex: 1;
+}
+
+@media (max-width: 620px) {
+  body {
+    min-width: 320px;
+  }
+}

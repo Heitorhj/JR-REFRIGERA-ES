@@ -1,0 +1,60 @@
+.orders-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 22px;
+}
+
+.orders-workspace.has-details {
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.8fr);
+}
+
+.orders-column {
+  min-width: 0;
+}
+
+.orders-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  color: var(--color-ink);
+  font-size: 0.82rem;
+}
+
+.orders-pagination > span {
+  display: grid;
+}
+
+.orders-pagination small {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+}
+
+.orders-pagination > div {
+  display: flex;
+  gap: 8px;
+}
+
+.orders-pagination button {
+  min-height: 36px;
+  border: 1px solid var(--color-line);
+  border-radius: 9px;
+  padding: 0 12px;
+  color: var(--color-ink);
+  background: #fff;
+  font-size: 0.77rem;
+  font-weight: 700;
+}
+
+.orders-pagination button:disabled {
+  color: #aab7b3;
+  background: #f4f6f5;
+}
+
+@media (max-width: 1040px) {
+  .orders-workspace.has-details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,76 @@
+.site-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: min(1200px, calc(100% - 64px));
+  min-height: 88px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 auto;
+  border-bottom: 1px solid rgba(225, 233, 230, 0.75);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: grid;
+  width: 43px;
+  height: 43px;
+  place-items: center;
+  border-radius: 14px;
+  color: #fff;
+  background: var(--color-primary);
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+}
+
+.brand-copy {
+  display: grid;
+  line-height: 1.2;
+}
+
+.brand-copy strong {
+  font-size: 0.94rem;
+}
+
+.brand-copy small {
+  margin-top: 4px;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-greeting {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+@media (max-width: 620px) {
+  .site-header {
+    width: calc(100% - 36px);
+    min-height: 74px;
+  }
+
+  .brand-copy small,
+  .admin-link,
+  .user-greeting {
+    display: none;
+  }
+
+  .header-actions {
+    gap: 8px;
+  }
+}
