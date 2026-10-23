@@ -1,7 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client.js";
-
-const AuthContext = createContext(null);
+import { AuthContext } from "./auth-context.js";
 const storageKey = "jr-admin-token";
 
 export function AuthProvider({ children }) {
@@ -57,14 +56,4 @@ export function AuthProvider({ children }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth deve ser usado dentro de AuthProvider.");
-  }
-
-  return context;
 }

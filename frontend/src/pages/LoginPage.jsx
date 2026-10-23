@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
+import { useAuth } from "../context/useAuth.js";
 import FeedbackMessage from "../components/FeedbackMessage.jsx";
 import FormField from "../components/FormField.jsx";
 
