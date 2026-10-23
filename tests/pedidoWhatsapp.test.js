@@ -253,6 +253,10 @@ test("resposta aceita confirma; negociar e cancelar mudam para status adequados"
         {
             acao: "CANCELAR",
             status: "CANCELADO"
+        },
+        {
+            acao: "RECUSAR_PROPOSTA",
+            status: "CANCELADO"
         }
     ];
 
@@ -260,11 +264,19 @@ test("resposta aceita confirma; negociar e cancelar mudam para status adequados"
         pedidoRepository.buscarDadosParaEnvioManualProposta =
             async () => criarPedidoProposta({ status: "AGUARDANDO_CLIENTE" });
         pedidoRepository.registrarRespostaCliente =
-            async (id, administradorId, acao, observacao, novoStatus) => {
+            async (
+                id,
+                administradorId,
+                acao,
+                observacao,
+                statusAtual,
+                novoStatus
+            ) => {
                 assert.equal(id, 17);
                 assert.equal(administradorId, 5);
                 assert.equal(acao, caso.acao);
                 assert.equal(observacao, "Resposta confirmada por telefone.");
+                assert.equal(statusAtual, "AGUARDANDO_CLIENTE");
                 assert.equal(novoStatus, caso.status);
                 return { status: novoStatus };
             };
@@ -292,7 +304,7 @@ test("não registra resposta se pedido ainda não aguarda cliente", async () => 
     );
 });
 
-test("resposta cliente atualiza estado, reage ao rascunho enviado e grava histórico atomicamente", async () => {
+test("resposta cliente atualiza estado e grava histórico atomicamente", async () => {
     let dadosAtualizacao;
     let reagendamentoAtualizado;
     let historico;
@@ -324,6 +336,7 @@ test("resposta cliente atualiza estado, reage ao rascunho enviado e grava histó
         5,
         "ACEITAR",
         "Cliente aceitou a proposta.",
+        "AGUARDANDO_CLIENTE",
         "CONFIRMADO"
     );
 
@@ -337,10 +350,10 @@ test("resposta cliente atualiza estado, reage ao rascunho enviado e grava histó
     assert.equal(resultado.status, "CONFIRMADO");
 });
 
-test("negociação e cancelamento não classificam a data proposta como recusada", async () => {
+test("negociação preserva reagendamento e recusa definitiva descarta o pedido", async () => {
     for (const caso of [
         { acao: "NEGOCIAR", status: "EM_NEGOCIACAO" },
-        { acao: "CANCELAR", status: "CANCELADO" }
+        { acao: "RECUSAR_PROPOSTA", status: "CANCELADO" }
     ]) {
         let dadosAtualizacao;
         let reagendamentoAlterado = false;
@@ -361,6 +374,12 @@ test("negociação e cancelamento não classificam a data proposta como recusada
                 async create() {
                     return { criadoEm: new Date("2026-10-23T03:00:00.000Z") };
                 }
+            },
+            reagendamento: {
+                async updateMany() {
+                    reagendamentoAlterado = true;
+                    return { count: 1 };
+                }
             }
         });
 
@@ -369,10 +388,15 @@ test("negociação e cancelamento não classificam a data proposta como recusada
             5,
             caso.acao,
             undefined,
+            "AGUARDANDO_CLIENTE",
             caso.status
         );
 
-        assert.deepEqual(dadosAtualizacao, { status: caso.status });
+        assert.equal(dadosAtualizacao.status, caso.status);
+        assert.equal(
+            Object.hasOwn(dadosAtualizacao, "descartadoEm"),
+            caso.status === "CANCELADO"
+        );
         assert.equal(reagendamentoAlterado, false);
     }
 });

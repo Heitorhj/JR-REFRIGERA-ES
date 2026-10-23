@@ -74,11 +74,19 @@ const validarRespostaCliente = (req, res, next) => {
         });
     }
 
-    const acoesPermitidas = ["ACEITAR", "NEGOCIAR", "CANCELAR"];
+    const acoesPermitidas = [
+        "ACEITAR",
+        "NEGOCIAR",
+        "RECUSAR_PROPOSTA",
+        "CANCELAR"
+    ];
 
-    if (typeof corpo.acao !== "string" || !acoesPermitidas.includes(corpo.acao)) {
+    if (
+        typeof corpo.acao !== "string" ||
+        !acoesPermitidas.includes(corpo.acao)
+    ) {
         return res.status(400).json({
-            mensagem: "Ação inválida. Use ACEITAR, NEGOCIAR ou CANCELAR."
+            mensagem: "Ação inválida. Use ACEITAR, NEGOCIAR, RECUSAR_PROPOSTA ou CANCELAR."
         });
     }
 

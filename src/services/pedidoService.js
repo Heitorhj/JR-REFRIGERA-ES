@@ -177,7 +177,10 @@ class PedidoService {
             throw new AppError("Não é possível registrar resposta de pedido descartado.", 409);
         }
 
-        if (pedido.status !== "AGUARDANDO_CLIENTE") {
+        const statusAguardandoResposta = pedido.status === "AGUARDANDO_CLIENTE";
+        const statusEmNegociacao = pedido.status === "EM_NEGOCIACAO";
+
+        if (!statusAguardandoResposta && !statusEmNegociacao) {
             throw new AppError("A resposta só pode ser registrada após informar o envio da proposta.", 409);
         }
 
@@ -195,8 +198,15 @@ class PedidoService {
 
             novoStatus = "CONFIRMADO";
         } else if (resposta.acao === "NEGOCIAR") {
+            if (!statusAguardandoResposta) {
+                throw new AppError("O pedido já está em negociação.", 409);
+            }
+
             novoStatus = "EM_NEGOCIACAO";
-        } else if (resposta.acao === "CANCELAR") {
+        } else if (
+            resposta.acao === "RECUSAR_PROPOSTA" ||
+            resposta.acao === "CANCELAR"
+        ) {
             novoStatus = "CANCELADO";
         } else {
             throw new AppError("Ação de resposta inválida.", 400);
@@ -207,6 +217,7 @@ class PedidoService {
             administradorId,
             resposta.acao,
             resposta.observacao,
+            pedido.status,
             novoStatus
         );
     }

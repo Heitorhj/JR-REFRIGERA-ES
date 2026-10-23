@@ -438,18 +438,25 @@ const registrarRespostaCliente = async (
     administradorId,
     acao,
     observacao,
+    statusAtual,
     novoStatus
 ) => {
     return prisma.$transaction(async (tx) => {
+        const dadosAtualizacao = {
+            status: novoStatus
+        };
+
+        if (novoStatus === "CANCELADO") {
+            dadosAtualizacao.descartadoEm = new Date();
+        }
+
         const resultado = await tx.pedido.updateMany({
             where: {
                 id,
-                status: "AGUARDANDO_CLIENTE",
+                status: statusAtual,
                 descartadoEm: null
             },
-            data: {
-                status: novoStatus
-            }
+            data: dadosAtualizacao
         });
 
         if (resultado.count !== 1) {
@@ -459,8 +466,6 @@ const registrarRespostaCliente = async (
             );
         }
 
-        // Only an explicit acceptance answers the proposed date. Negotiating
-        // or cancelling the order must not be recorded as rejecting that date.
         if (acao === "ACEITAR") {
             await tx.reagendamento.updateMany({
                 where: {
@@ -483,7 +488,7 @@ const registrarRespostaCliente = async (
             data: {
                 pedidoId: id,
                 administradorId,
-                statusAnterior: "AGUARDANDO_CLIENTE",
+                statusAnterior: statusAtual,
                 statusNovo: novoStatus,
                 observacao: textoObservacao
             },
