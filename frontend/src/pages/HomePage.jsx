@@ -32,11 +32,11 @@ const reasons = [
 
 function HomePage() {
   return (
-    <main className="home-page-shell">
+    <main className="home-page-shell home-page-shell--lift">
       <HeroSection />
       <ServiceHighlights />
 
-      <section className="home-story">
+      <section className="home-story" id="como-funciona">
         <div className="story-copy">
           <span className="eyebrow">JR Refrigerações</span>
           <h2>Atendimento profissional para manter seu ambiente sempre em equilíbrio.</h2>

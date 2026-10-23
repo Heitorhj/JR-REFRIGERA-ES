@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { useAuth } from "./context/useAuth.js";
 import SiteHeader from "./components/SiteHeader.jsx";
@@ -23,9 +23,12 @@ function ProtectedRoute({ children }) {
 }
 
 function AppRoutes() {
+  const { pathname } = useLocation();
+  const telaDeLogin = pathname === "/admin/login";
+
   return (
-    <div className="app-shell">
-      <SiteHeader />
+    <div className={telaDeLogin ? "app-shell app-shell--auth" : "app-shell"}>
+      {!telaDeLogin && <SiteHeader />}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/solicitar-orcamento" element={<RequestPage />} />
@@ -40,7 +43,7 @@ function AppRoutes() {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <SiteFooter />
+      {!telaDeLogin && <SiteFooter />}
     </div>
   );
 }

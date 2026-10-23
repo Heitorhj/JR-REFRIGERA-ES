@@ -18,13 +18,8 @@
   font-weight: 700;
 }
 
-.filter-select select {
-  min-height: 44px;
-  border: 1px solid var(--color-line);
-  border-radius: 11px;
-  padding: 0 36px 0 13px;
-  color: var(--color-ink);
-  background: #fff;
+.filter-select .select-trigger {
+  min-width: 220px;
 }
 
 .trash-toggle {

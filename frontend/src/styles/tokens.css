@@ -1,7 +1,7 @@
 :root {
   font-family: "DM Sans", "Segoe UI", sans-serif;
   color: #18302f;
-  background: #f7f9f8;
+  background: #f6f3ec;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -13,7 +13,7 @@
   --color-accent: #d18b4a;
   --color-line: #e1e9e6;
   --color-paper: #ffffff;
-  --color-page: #f7f9f8;
+  --color-page: #f6f3ec;
   --color-danger: #a34036;
   --shadow-card: 0 16px 48px rgba(27, 61, 55, 0.08);
   --radius-card: 20px;

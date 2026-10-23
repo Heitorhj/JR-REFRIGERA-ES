@@ -1,40 +1,85 @@
 import { Link } from "react-router-dom";
 import "../../styles/hero-section.css";
 
+function scrollToSection(event, id) {
+  const section = document.getElementById(id);
+  if (!section) return;
+  event.preventDefault();
+  section.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function HeroSection() {
   return (
-    <section className="hero-section">
-      <div className="hero-copy">
-        <span className="eyebrow"><span className="status-dot" /> Atendimento em Pernambuco</span>
-        <h1>Seu ambiente fresco.<br /><em>Seu dia mais leve.</em></h1>
-        <p>
-          Instalação, manutenção e cuidado especializado para o seu ar-condicionado,
-          com atendimento próximo e transparente.
-        </p>
-        <div className="hero-actions">
-          <Link className="button button-primary" to="/solicitar-orcamento">
-            Pedir meu orçamento <span aria-hidden="true">→</span>
-          </Link>
-          <span className="hero-note">Sem compromisso · Resposta pelo WhatsApp</span>
-        </div>
-        <div className="hero-proof">
-          <span className="proof-icon" aria-hidden="true">✓</span>
-          <span><strong>Atendimento cuidadoso</strong><small>Do primeiro contato à conclusão</small></span>
-        </div>
+    <section className="hero-band">
+      <div className="hero-band-media" aria-hidden="true">
+        <img
+          src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=2000&q=80"
+          alt=""
+        />
+        <div className="hero-band-shade" />
       </div>
 
-      <div className="hero-art" role="img" aria-label="Ilustração de uma sala confortável e climatizada">
-        <div className="sun-disc" />
-        <div className="room-window"><span /><span /><span /><span /></div>
-        <div className="air-unit"><span /><i /><i /><i /><i /></div>
-        <div className="air-flow flow-one" /><div className="air-flow flow-two" /><div className="air-flow flow-three" />
-        <div className="room-plant plant-one"><i /><i /><i /><b /></div>
-        <div className="room-plant plant-two"><i /><i /><b /></div>
-        <div className="room-floor" />
-        <div className="room-sofa"><span /><i /></div>
-        <div className="art-caption">
-          <span className="caption-star" aria-hidden="true">✳</span>
-          <span><strong>Bem-estar começa em casa</strong><small>Climatização feita com atenção</small></span>
+      <div className="hero-band-inner">
+        <div className="hero-copy">
+          <span className="hero-pill">
+            <span className="status-dot" />
+            Atendimento em Pernambuco
+          </span>
+          <h1>
+            Seu ambiente fresco.
+            <br />
+            <em>Seu dia mais leve.</em>
+          </h1>
+          <p>
+            Instalação, manutenção e cuidado para o ar-condicionado da sua casa,
+            com conversa direta e um orçamento pensado para o seu espaço.
+          </p>
+          <div className="hero-actions">
+            <Link className="button button-primary" to="/solicitar-orcamento">
+              Pedir meu orçamento <span aria-hidden="true">→</span>
+            </Link>
+            <a
+              className="button button-ghost"
+              href="#como-funciona"
+              onClick={(event) => scrollToSection(event, "como-funciona")}
+            >
+              Como funciona
+              <span className="button-arrow" aria-hidden="true">→</span>
+            </a>
+          </div>
+        </div>
+
+        <div className="hero-stage">
+          <article className="float-card float-card-main">
+            <header>
+              <span className="float-mark" aria-hidden="true">❄</span>
+              <span>
+                <strong>Cuidado para o seu ar</strong>
+                <small>Do primeiro contato à conclusão</small>
+              </span>
+            </header>
+            <ul>
+              <li>
+                <em>Instalação</em>
+                <span>Posicionamento e acabamento cuidadoso</span>
+              </li>
+              <li>
+                <em>Manutenção</em>
+                <span>Revisão para o equipamento seguir bem</span>
+              </li>
+              <li>
+                <em>Reparo</em>
+                <span>Diagnóstico claro antes de qualquer serviço</span>
+              </li>
+            </ul>
+          </article>
+          <article className="float-card float-card-note">
+            <span className="note-sun" aria-hidden="true" />
+            <span>
+              <strong>Sem compromisso</strong>
+              <small>A resposta chega pelo WhatsApp</small>
+            </span>
+          </article>
         </div>
       </div>
     </section>

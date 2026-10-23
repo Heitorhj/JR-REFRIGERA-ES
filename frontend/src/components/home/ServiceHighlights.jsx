@@ -9,7 +9,7 @@ function ServiceHighlights() {
         <div><span>03</span><p><strong>Na sua região</strong><small>Consulte as cidades atendidas</small></p></div>
       </section>
 
-      <section className="services-section">
+      <section className="services-section" id="servicos">
         <div className="services-heading">
           <span className="eyebrow">Como podemos ajudar</span>
           <h2>Cuidado completo para o seu ar</h2>

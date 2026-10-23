@@ -1,36 +1,51 @@
 @media (max-width: 920px) {
-  .hero-section {
+  .hero-band {
     min-height: auto;
-    grid-template-columns: 1fr;
-    gap: 40px;
-    padding-top: 58px;
+    padding-top: 112px;
   }
+
+  .hero-band-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+
   .hero-copy { max-width: 680px; }
-  .hero-art { min-height: 420px; }
+
+  .hero-stage {
+    display: grid;
+    min-height: 0;
+    gap: 12px;
+  }
+
+  .float-card-main,
+  .float-card-note {
+    position: static;
+    width: min(420px, 100%);
+  }
 }
 
 @media (max-width: 680px) {
-  .hero-section,
+  .home-page-shell--lift { margin-top: -74px; }
+  .hero-band { padding: 104px 0 56px; }
+  .hero-band-inner,
   .trust-strip,
   .services-section,
   .home-cta {
     width: calc(100% - 36px);
   }
-  .hero-section { padding: 42px 0; }
-  .hero-copy h1 { font-size: clamp(2.65rem, 12vw, 4rem); }
+  .hero-copy h1 {
+    max-width: 100%;
+    font-size: clamp(2.15rem, 9.6vw, 3.1rem);
+  }
   .hero-copy > p { font-size: 0.98rem; }
-  .hero-actions { align-items: flex-start; flex-direction: column; gap: 12px; }
-  .hero-art { min-height: 350px; border-radius: 26px 26px 88px 26px; }
-  .room-window { top: 49px; left: 26px; width: 135px; height: 105px; }
-  .sun-disc { top: 30px; right: 23px; width: 135px; height: 135px; }
-  .air-unit { top: 53px; right: 25px; width: 135px; height: 38px; }
-  .air-flow { right: 40px; }
-  .room-sofa { right: 55px; bottom: 88px; transform: scale(0.8); transform-origin: bottom right; }
-  .room-plant { left: 8px; bottom: 65px; transform: scale(0.8); transform-origin: bottom left; }
-  .plant-two { right: 4px; bottom: 47px; }
-  .art-caption { right: 10px; bottom: 10px; padding: 9px 12px; }
-  .trust-strip { grid-template-columns: 1fr; gap: 18px; padding: 24px 0; }
-  .trust-strip > div { border: 0; padding: 0; }
+  .hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .hero-actions .button {
+    width: 100%;
+  }
+  .trust-strip { grid-template-columns: 1fr; gap: 12px; margin-top: 8px; padding: 8px 0 12px; }
   .services-section { margin: 72px auto 56px; }
   .service-cards { grid-template-columns: 1fr; }
   .service-card { min-height: auto; }

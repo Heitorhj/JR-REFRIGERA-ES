@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
+import BrandLogo from "./BrandLogo.jsx";
 import "../styles/site-footer.css";
 
 function SiteFooter() {
   return (
     <footer className="site-footer">
       <Link className="brand brand-footer" to="/">
-        <span className="brand-mark" aria-hidden="true">JR</span>
+        <BrandLogo size={38} />
         <span className="brand-copy">
           <strong>JR Refrigerações</strong>
           <small>Conforto em cada ambiente</small>

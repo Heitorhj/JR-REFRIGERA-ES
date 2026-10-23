@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "../../api/client.js";
 import FeedbackMessage from "../FeedbackMessage.jsx";
 import FormField from "../FormField.jsx";
+import DateField from "../DateField.jsx";
+import SelectField from "../SelectField.jsx";
 
 const initialForm = {
   nome: "",
@@ -21,6 +23,7 @@ function RequestForm({ onCreated }) {
   const [carregandoCatalogo, setCarregandoCatalogo] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
+  const [errosCampo, setErrosCampo] = useState({});
   const [dataMinima] = useState(() =>
     new Date().toLocaleDateString("en-CA", { timeZone: "America/Recife" })
   );
@@ -49,11 +52,27 @@ function RequestForm({ onCreated }) {
   const atualizar = (event) => {
     const { name, value } = event.target;
     setForm((atual) => ({ ...atual, [name]: value }));
+    setErrosCampo((atual) => ({ ...atual, [name]: "" }));
+  };
+
+  const definirErro = (campo, mensagem) => {
+    setErrosCampo((atual) => ({ ...atual, [campo]: mensagem }));
   };
 
   const enviar = async (event) => {
     event.preventDefault();
     setErro("");
+
+    const pendencias = {};
+    if (!form.cidadeId) pendencias.cidadeId = "Selecione sua cidade.";
+    if (!form.servicoId) pendencias.servicoId = "Selecione o serviço.";
+    if (!form.dataPreferida) {
+      pendencias.dataPreferida = errosCampo.dataPreferida || "Informe a data preferida.";
+    }
+    if (!form.turnoPreferido) pendencias.turnoPreferido = "Selecione um turno.";
+    setErrosCampo(pendencias);
+    if (Object.keys(pendencias).length > 0) return;
+
     setEnviando(true);
 
     try {
@@ -104,23 +123,19 @@ function RequestForm({ onCreated }) {
           onChange={atualizar}
           required
         />
-        <div className="form-field">
+        <div className={`form-field${errosCampo.cidadeId ? " field-invalid" : ""}`}>
           <label htmlFor="cidadeId">Cidade</label>
-          <select
+          <SelectField
             id="cidadeId"
             name="cidadeId"
             value={form.cidadeId}
-            onChange={atualizar}
-            required
+            placeholder={carregandoCatalogo ? "Carregando cidades..." : "Selecione sua cidade"}
             disabled={carregandoCatalogo || cidades.length === 0}
-          >
-            <option value="">Selecione sua cidade</option>
-            {cidades.map((cidade) => (
-              <option key={cidade.id} value={cidade.id}>
-                {cidade.nome}
-              </option>
-            ))}
-          </select>
+            invalid={Boolean(errosCampo.cidadeId)}
+            options={cidades.map((cidade) => ({ value: String(cidade.id), label: cidade.nome }))}
+            onChange={atualizar}
+          />
+          {errosCampo.cidadeId && <small className="field-error">{errosCampo.cidadeId}</small>}
           {form.cidadeId && (
             <small>
               Taxa estimada de deslocamento:{" "}
@@ -134,23 +149,19 @@ function RequestForm({ onCreated }) {
             </small>
           )}
         </div>
-        <div className="form-field">
+        <div className={`form-field${errosCampo.servicoId ? " field-invalid" : ""}`}>
           <label htmlFor="servicoId">Serviço</label>
-          <select
+          <SelectField
             id="servicoId"
             name="servicoId"
             value={form.servicoId}
-            onChange={atualizar}
-            required
+            placeholder={carregandoCatalogo ? "Carregando serviços..." : "O que você precisa?"}
             disabled={carregandoCatalogo || servicos.length === 0}
-          >
-            <option value="">O que você precisa?</option>
-            {servicos.map((servico) => (
-              <option key={servico.id} value={servico.id}>
-                {servico.nome}
-              </option>
-            ))}
-          </select>
+            invalid={Boolean(errosCampo.servicoId)}
+            options={servicos.map((servico) => ({ value: String(servico.id), label: servico.nome }))}
+            onChange={atualizar}
+          />
+          {errosCampo.servicoId && <small className="field-error">{errosCampo.servicoId}</small>}
         </div>
         <div className="form-field request-wide">
           <label htmlFor="endereco">Endereço do atendimento</label>
@@ -165,31 +176,36 @@ function RequestForm({ onCreated }) {
             required
           />
         </div>
-        <div className="form-field">
+        <div className={`form-field${errosCampo.dataPreferida ? " field-invalid" : ""}`}>
           <label htmlFor="dataPreferida">Data preferida</label>
-          <input
+          <DateField
             id="dataPreferida"
             name="dataPreferida"
-            type="date"
-            min={dataMinima}
             value={form.dataPreferida}
+            min={dataMinima}
+            invalid={Boolean(errosCampo.dataPreferida)}
             onChange={atualizar}
-            required
+            onError={(mensagem) => definirErro("dataPreferida", mensagem)}
           />
+          {errosCampo.dataPreferida && (
+            <small id="dataPreferida-erro" className="field-error">{errosCampo.dataPreferida}</small>
+          )}
         </div>
-        <div className="form-field">
+        <div className={`form-field${errosCampo.turnoPreferido ? " field-invalid" : ""}`}>
           <label htmlFor="turnoPreferido">Turno</label>
-          <select
+          <SelectField
             id="turnoPreferido"
             name="turnoPreferido"
             value={form.turnoPreferido}
+            placeholder="Selecione um turno"
+            invalid={Boolean(errosCampo.turnoPreferido)}
+            options={[
+              { value: "MANHA", label: "Manhã" },
+              { value: "TARDE", label: "Tarde" }
+            ]}
             onChange={atualizar}
-            required
-          >
-            <option value="">Selecione um turno</option>
-            <option value="MANHA">Manhã</option>
-            <option value="TARDE">Tarde</option>
-          </select>
+          />
+          {errosCampo.turnoPreferido && <small className="field-error">{errosCampo.turnoPreferido}</small>}
         </div>
         <div className="form-field request-wide">
           <label htmlFor="descricaoProblema">Conte um pouco sobre o que aconteceu</label>

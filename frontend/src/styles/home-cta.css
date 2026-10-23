@@ -7,7 +7,7 @@
   margin: 0 auto;
   border-radius: 26px;
   padding: 42px 48px;
-  background: #eaf3ef;
+  background: linear-gradient(135deg, #e7f3ee 0%, #f8f1e4 100%);
 }
 
 .home-cta > div { max-width: 660px; }
