@@ -23,6 +23,10 @@ import {
 
 // Rotas de taxas de deslocamento
 import taxaDeslocamentoRoutes from "./routes/taxaDeslocamento.routes.js";
+import {
+    pedidoRoutes,
+    adminPedidoRoutes
+} from "./routes/pedido.routes.js";
 
 // Tratamento de erros
 import errorHandler from "./errors/errorHandler.js";
@@ -53,6 +57,7 @@ app.use("/api/auth", authRoutes);
 
 app.use("/api/servicos", servicoRoutes);
 app.use("/api/cidades", cidadeRoutes);
+app.use("/api/pedidos", pedidoRoutes);
 
 // ========================================
 // 4. ROTAS ADMINISTRATIVAS
@@ -61,6 +66,7 @@ app.use("/api/cidades", cidadeRoutes);
 app.use("/api/admin/servicos", adminServicoRoutes);
 app.use("/api/admin/cidades", adminCidadeRoutes);
 app.use("/api/admin/taxas-deslocamento", taxaDeslocamentoRoutes);
+app.use("/api/admin/pedidos", adminPedidoRoutes);
 
 // ========================================
 // 5. RATE LIMITING (PENDENTE)
