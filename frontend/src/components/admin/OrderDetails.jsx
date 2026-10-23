@@ -1,4 +1,5 @@
 import "../../styles/order-details.css";
+import OrderActions from "./OrderActions.jsx";
 
 const formatCurrency = (centavos) => {
   if (!Number.isSafeInteger(centavos)) return "Não informado";
@@ -24,7 +25,7 @@ const formatTimestamp = (date) => {
   }).format(new Date(date));
 };
 
-function OrderDetails({ order, loading, onClose, onEditProposal }) {
+function OrderDetails({ order, loading, onClose, token, onUpdated }) {
   if (loading) {
     return (
       <aside className="order-details-panel">
@@ -63,15 +64,14 @@ function OrderDetails({ order, loading, onClose, onEditProposal }) {
         </dl>
       </div>
 
+      <OrderActions
+        token={token}
+        order={order}
+        onUpdated={onUpdated}
+      />
+
       <div className="details-section">
-        <div className="details-section-title">
-          <h3>Proposta</h3>
-          {["PENDENTE", "ACEITO_POR_JUNIOR"].includes(order.status) && (
-            <button className="text-button" type="button" onClick={onEditProposal}>
-              {order.valorPrevisto ? "Editar" : "Preparar"}
-            </button>
-          )}
-        </div>
+        <h3>Proposta</h3>
         <dl className="details-grid proposal-summary">
           <div><dt>Serviço</dt><dd>{formatCurrency(order.valorPrevisto)}</dd></div>
           <div><dt>Deslocamento</dt><dd>{formatCurrency(order.taxaDeslocamentoFinal ?? order.taxaDeslocamentoEstimada)}</dd></div>
