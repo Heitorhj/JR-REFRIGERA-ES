@@ -23,6 +23,7 @@ import {
 
 // Rotas de taxas de deslocamento
 import taxaDeslocamentoRoutes from "./routes/taxaDeslocamento.routes.js";
+import { pedidoRoutes } from "./routes/pedido.routes.js";
 
 // Tratamento de erros
 import errorHandler from "./errors/errorHandler.js";
@@ -53,6 +54,7 @@ app.use("/api/auth", authRoutes);
 
 app.use("/api/servicos", servicoRoutes);
 app.use("/api/cidades", cidadeRoutes);
+app.use("/api/pedidos", pedidoRoutes);
 
 // ========================================
 // 4. ROTAS ADMINISTRATIVAS
