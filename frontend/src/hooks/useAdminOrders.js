@@ -70,6 +70,11 @@ function useAdminOrders(token) {
     await openOrder(selectedId);
   }, [selectedId, openOrder]);
 
+  const closeOrder = () => {
+    setSelectedId(null);
+    setSelectedOrder(null);
+  };
+
   const refresh = useCallback(async () => {
     await loadOrders();
     await refreshSelectedOrder();
@@ -104,6 +109,7 @@ function useAdminOrders(token) {
     changeStatus,
     changeTrash,
     openOrder,
+    closeOrder,
     refresh
   };
 }
