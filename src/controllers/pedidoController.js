@@ -23,6 +23,17 @@ const cadastrarPedido = async (req, res, next) => {
     }
 };
 
+const listarPedidos = async (req, res, next) => {
+    try {
+        const resultado = await pedidoService.listarPedidos(req.dados.query);
+
+        return res.status(200).json(resultado);
+    } catch (error) {
+        return next(error);
+    }
+};
+
 export default {
+    listarPedidos,
     cadastrarPedido
 };

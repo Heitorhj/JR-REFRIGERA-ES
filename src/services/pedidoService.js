@@ -3,6 +3,20 @@ import pedidoRepository from "../repositories/pedidoRepository.js";
 import AppError from "../errors/AppError.js";
 
 class PedidoService {
+    async listarPedidos(filtros) {
+        const resultado = await pedidoRepository.listarPedidos(filtros);
+
+        return {
+            pedidos: resultado.pedidos,
+            paginacao: {
+                paginaAtual: filtros.page,
+                limite: filtros.limit,
+                total: resultado.total,
+                totalPaginas: Math.ceil(resultado.total / filtros.limit)
+            }
+        };
+    }
+
     async cadastrarPedido(dados) {
         const {
             nome,

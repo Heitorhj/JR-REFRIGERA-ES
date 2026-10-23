@@ -23,6 +23,117 @@ const buscarServicoPorId = async (id) => {
     });
 };
 
+// Lista os pedidos para o painel administrativo.
+// Permite filtrar por status e navegar entre páginas.
+const listarPedidos = async ({ page, limit, status }) => {
+
+    // 1. PREPARAR OS FILTROS
+
+    // Por padrão, buscamos somente pedidos não descartados.
+    // O campo descartadoEm será preenchido quando um pedido
+    // for enviado para a área de descarte.
+    const where = {
+        descartadoEm: null
+    };
+
+    // Se o administrador informou um status,
+    // adicionamos esse filtro à consulta.
+    // Exemplo: where.status = "PENDENTE".
+    if (status !== undefined) {
+        where.status = status;
+    }
+
+    // 2. CALCULAR A PAGINAÇÃO
+
+    // page representa qual página desejamos visualizar.
+    // limit representa quantos pedidos queremos por página.
+    //
+    // Exemplo: page = 2 e limit = 10.
+    // skip = (2 - 1) * 10 = 10.
+    //
+    // O Prisma ignorará os primeiros 10 pedidos
+    // da lista filtrada e ordenada.
+    const skip = (page - 1) * limit;
+
+    // 3. CONSULTAR PEDIDOS E QUANTIDADE TOTAL
+
+    // Promise.all executa as duas consultas sem precisar
+    // aguardar a primeira terminar para iniciar a segunda.
+    //
+    // findMany: busca os pedidos da página solicitada.
+    // count: conta todos os pedidos que atendem aos filtros,
+    // independentemente da página.
+    //
+    // O resultado é um array:
+    // [listaDePedidos, quantidadeTotal].
+    const [pedidos, total] = await Promise.all([
+
+        prisma.pedido.findMany({
+            where,
+
+            // Ordena do pedido mais recente para o mais antigo.
+            // O ID desempata pedidos com a mesma data de criação.
+            orderBy: [
+                { criadoEm: "desc" },
+                { id: "desc" }
+            ],
+
+            // Quantos registros serão ignorados.
+            skip,
+
+            // Quantos registros, no máximo, serão retornados.
+            take: limit,
+
+            // Seleciona somente os campos necessários ao painel.
+            select: {
+                id: true,
+                status: true,
+                dataPreferida: true,
+                turnoPreferido: true,
+                taxaDeslocamentoEstimada: true,
+                criadoEm: true,
+
+                // Inclui nome e WhatsApp do cliente associado.
+                cliente: {
+                    select: {
+                        nome: true,
+                        whatsapp: true
+                    }
+                },
+
+                // Inclui o nome da cidade.
+                cidade: {
+                    select: {
+                        nome: true
+                    }
+                },
+
+                // Inclui o nome do serviço solicitado.
+                servico: {
+                    select: {
+                        nome: true
+                    }
+                }
+            }
+        }),
+
+        // Conta todos os pedidos que atendem aos mesmos filtros.
+        // Não utiliza skip nem take, pois precisamos do total
+        // para calcular quantas páginas existem.
+        prisma.pedido.count({
+            where
+        })
+    ]);
+
+    // Retorna os pedidos encontrados e o total.
+    // O Service utilizará essas informações para
+    // montar a resposta com os dados de paginação.
+    return {
+        pedidos,
+        total
+    };
+};
+
 // Cria um novo pedido, reutilizando o cliente caso já exista.
 const criarPedido = async (dados) => {
 
@@ -104,5 +215,6 @@ const criarPedido = async (dados) => {
 export default {
     buscarCidadePorId,
     buscarServicoPorId,
+    listarPedidos,
     criarPedido
 };

@@ -18,7 +18,11 @@ pedidoRoutes.post(
 
 // ROTAS ADMINISTRATIVAS
 
-// As próximas funcionalidades administrativas serão adicionadas aqui.
-// Todas deverão utilizar loginRequired antes do Controller.
+adminPedidoRoutes.get(
+    "/",
+    loginRequired,
+    pedidoValidator.validarListagem,
+    pedidoController.listarPedidos
+);
 
 export { pedidoRoutes, adminPedidoRoutes };
