@@ -13,7 +13,7 @@ import FeedbackMessage from "../FeedbackMessage.jsx";
 import FormField from "../FormField.jsx";
 import "../../styles/order-actions.css";
 
-function OrderActions({ token, order, onUpdated, onEditProposal }) {
+function OrderActions({ token, order, onUpdated }) {
   const [services, setServices] = useState([]);
   const [panel, setPanel] = useState("");
   const [proposal, setProposal] = useState({
@@ -51,7 +51,6 @@ function OrderActions({ token, order, onUpdated, onEditProposal }) {
       const result = await api("/api/servicos");
       setServices(result.servicos);
       setPanel("proposal");
-      onEditProposal();
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -60,12 +59,21 @@ function OrderActions({ token, order, onUpdated, onEditProposal }) {
   };
 
   const openWhatsApp = async () => {
+    const whatsappWindow = window.open("about:blank", "_blank");
+
+    if (!whatsappWindow) {
+      setError("Permita pop-ups para abrir a conversa no WhatsApp.");
+      return;
+    }
+
+    whatsappWindow.opener = null;
     setBusy(true);
     setError("");
     try {
       const result = await getWhatsAppLink(token, order.id);
-      window.open(result.url, "_blank", "noopener,noreferrer");
+      whatsappWindow.location.href = result.url;
     } catch (requestError) {
+      whatsappWindow.close();
       setError(requestError.message);
     } finally {
       setBusy(false);
