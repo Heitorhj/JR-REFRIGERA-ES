@@ -200,8 +200,223 @@ const validarCadastroPedidos = (req, res, next) => {
     return next();
 };
 
+
+
+const validarProposta = (req, res, next) => {
+
+    // 1. VALIDAR ID DO PEDIDO
+    // O ID chega pela URL como string.
+    // Exemplo: PATCH /api/admin/pedidos/15/proposta
+
+    const id = Number(req.params.id);
+
+    // Verifica se o ID é um número inteiro seguro e positivo.
+    if (!Number.isSafeInteger(id) || id <= 0) {
+        return res.status(400).json({
+            mensagem: "ID do pedido inválido."
+        });
+    }
+
+    // 2. RECEBER OS CAMPOS DA PROPOSTA
+    const {
+        servicoId,
+        valorPrevisto,
+        taxaDeslocamentoFinal,
+        reagendamento
+    } = req.body ?? {};
+
+    // Define os únicos campos que Júnior pode enviar.
+    const camposPermitidos = [
+        "servicoId",
+        "valorPrevisto",
+        "taxaDeslocamentoFinal",
+        "reagendamento"
+    ];
+
+    // Verifica se foram enviados campos não permitidos.
+    // Exemplo: clienteId, cidadeId, status ou taxaDeslocamentoEstimada.
+    const camposInvalidos = Object.keys(req.body ?? {}).filter(
+        campo => !camposPermitidos.includes(campo)
+    );
+
+    if (camposInvalidos.length > 0) {
+        return res.status(400).json({
+            mensagem: `Campos não permitidos: ${camposInvalidos.join(", ")}.`
+        });
+    }
+
+    // 3. VALIDAR SERVIÇO
+    // Júnior pode corrigir o tipo de serviço selecionado pelo cliente.
+    // O Service verificará se o serviço existe e está ativo.
+    if (!Number.isSafeInteger(servicoId) || servicoId <= 0) {
+        return res.status(400).json({
+            mensagem: "ID do serviço inválido."
+        });
+    }
+
+    // 4. VALIDAR VALOR PREVISTO
+    // Todos os valores financeiros são enviados em centavos.
+    // Exemplo: 20000 = R$ 200,00.
+    if (
+        !Number.isSafeInteger(valorPrevisto) ||
+        valorPrevisto <= 0
+    ) {
+        return res.status(400).json({
+            mensagem: "Valor previsto deve ser um inteiro positivo em centavos."
+        });
+    }
+
+    // 5. VALIDAR TAXA DE DESLOCAMENTO FINAL
+    // Verifica se o valor enviado é um inteiro não negativo
+    // e está representado em centavos.
+    //
+    // A comparação com a taxa estimada original do pedido
+    // será realizada no Service, pois depende de uma
+    // informação que está armazenada no banco de dados.
+    if (
+        !Number.isSafeInteger(taxaDeslocamentoFinal) ||
+        taxaDeslocamentoFinal < 0
+    ) {
+        return res.status(400).json({
+            mensagem: "Taxa final deve ser um inteiro não negativo em centavos."
+        });
+    }
+
+    // 6. PREPARAR DADOS DA PROPOSTA
+    // Criamos somente os campos autorizados e validados.
+    // O total estimado será calculado no Service somente
+    // após verificar a taxa final em relação à taxa original.
+    const propostaValidada = {
+        servicoId,
+        valorPrevisto,
+        taxaDeslocamentoFinal
+    };
+
+    // 7. VALIDAR REAGENDAMENTO OPCIONAL
+    // Se Júnior não propôs outra data, não precisamos validar
+    // nem adicionar reagendamento à proposta.
+    if (reagendamento !== undefined) {
+
+        // Verifica se reagendamento é um objeto válido,
+        // e não um array ou null.
+        if (
+            typeof reagendamento !== "object" ||
+            reagendamento === null ||
+            Array.isArray(reagendamento)
+        ) {
+            return res.status(400).json({
+                mensagem: "Reagendamento inválido."
+            });
+        }
+
+        const {
+            novaData,
+            novoTurno,
+            motivo
+        } = reagendamento;
+
+        // Permite apenas os campos definidos no formulário.
+        const camposReagendamento = [
+            "novaData",
+            "novoTurno",
+            "motivo"
+        ];
+
+        const camposInvalidosReagendamento = Object.keys(reagendamento).filter(
+            campo => !camposReagendamento.includes(campo)
+        );
+
+        if (camposInvalidosReagendamento.length > 0) {
+            return res.status(400).json({
+                mensagem: "Campos não permitidos no reagendamento."
+            });
+        }
+
+        // 7.1. VALIDAR NOVA DATA
+        // O commonValidator verifica se o texto é obrigatório.
+        const erroData = commonValidator.validarTextoObrigatorio(
+            novaData,
+            "Nova data"
+        );
+
+        if (erroData) {
+            return res.status(400).json({
+                mensagem: erroData
+            });
+        }
+
+        // O util verifica formato YYYY-MM-DD, existência da data
+        // e se ela não está no passado, considerando Recife.
+        const dataNormalizada = formatarData(novaData);
+
+        if (!dataNormalizada) {
+            return res.status(400).json({
+                mensagem: "Nova data inválida, inexistente ou no passado."
+            });
+        }
+
+        // 7.2. VALIDAR NOVO TURNO
+        // Aceita somente os valores definidos no enum Turno.
+        if (
+            novoTurno !== "MANHA" &&
+            novoTurno !== "TARDE"
+        ) {
+            return res.status(400).json({
+                mensagem: "O novo turno deve ser MANHA ou TARDE."
+            });
+        }
+
+        // 7.3. VALIDAR MOTIVO OPCIONAL
+        // Se foi enviado, precisa ser uma string com até 500 caracteres.
+        let motivoNormalizado = null;
+
+        if (motivo !== undefined && motivo !== null) {
+            if (typeof motivo !== "string") {
+                return res.status(400).json({
+                    mensagem: "Motivo do reagendamento inválido."
+                });
+            }
+
+            motivoNormalizado = motivo.trim();
+
+            if (motivoNormalizado.length > 500) {
+                return res.status(400).json({
+                    mensagem: "Motivo deve ter no máximo 500 caracteres."
+                });
+            }
+
+            if (motivoNormalizado.length === 0) {
+                motivoNormalizado = null;
+            }
+        }
+
+        // Adiciona o reagendamento somente quando informado.
+        // A data original do pedido será preservada no banco.
+        propostaValidada.reagendamento = {
+            novaData: dataNormalizada,
+            novoTurno,
+            motivo: motivoNormalizado
+        };
+    }
+
+    // 8. ENTREGAR DADOS VALIDADOS AO CONTROLLER
+    // Não utilizamos campos extras enviados na requisição.
+    // O Service decidirá se o status atual permite salvar a proposta.
+    if (!req.dados) {
+        req.dados = {};
+    }
+
+    req.dados.id = id;
+    req.dados.proposta = propostaValidada;
+
+    return next();
+};
+
+
+
 export default {
     validarListagem,
     validarBuscaPorId,
-    validarCadastroPedidos
+    validarCadastroPedidos,
+    validarProposta
 };

@@ -43,8 +43,51 @@ const buscarPorId = async (req, res, next) => {
     }
 };
 
+
+const salvarProposta = async (req, res, next) => {
+    try {
+        // 1. RECEBER OS DADOS VALIDADOS
+
+        // O Validator já verificou e converteu o ID do pedido
+        // para um número inteiro positivo.
+        const id = req.dados.id;
+
+        // Contém somente os campos permitidos pelo Validator:
+        // servicoId, valorPrevisto, taxaDeslocamentoFinal
+        // e reagendamento (caso tenha sido informado).
+        const dados = req.dados.proposta;
+
+        // 2. CHAMAR O SERVICE
+
+        // Envia o ID e os dados da proposta para o Service.
+        // O Service verificará as regras de negócio,
+        // calculará o total estimado e salvará a proposta.
+        const proposta = await pedidoService.salvarProposta(
+            id,
+            dados,
+            req.administrador.id
+        );
+
+        // 3. RETORNAR A RESPOSTA
+
+        // Retorna HTTP 200 porque estamos atualizando
+        // um pedido que já existe no banco de dados.
+        return res.status(200).json({
+            mensagem: "Proposta de orçamento salva com sucesso.",
+            proposta
+        });
+
+    } catch (error) {
+        // Encaminha os erros para o middleware global,
+        // responsável por tratá-los e retornar a resposta adequada.
+        return next(error);
+    }
+};
+
+
 export default {
     listarPedidos,
     buscarPorId,
-    cadastrarPedido
+    cadastrarPedido,
+    salvarProposta
 };

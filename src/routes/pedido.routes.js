@@ -32,4 +32,12 @@ adminPedidoRoutes.get(
     pedidoController.buscarPorId
 );
 
+
+adminPedidoRoutes.patch(
+    "/:id/proposta",
+    loginRequired,
+    pedidoValidator.validarProposta,
+    pedidoController.salvarProposta
+);
+
 export { pedidoRoutes, adminPedidoRoutes };

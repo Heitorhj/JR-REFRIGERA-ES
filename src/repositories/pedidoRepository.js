@@ -1,5 +1,6 @@
 
 import prisma from "../db/prisma.js";
+import AppError from "../errors/AppError.js";
 
 // Busca uma cidade pelo ID informado.
 // Também retorna o valor da taxa de deslocamento associada à cidade.
@@ -287,10 +288,277 @@ const criarPedido = async (dados) => {
     });
 };
 
+
+// ============================================================
+// NOVOS MÉTODOS — PROPOSTA DE ORÇAMENTO
+// ============================================================
+
+
+// Busca somente os dados necessários para analisar uma proposta.
+// O Service utilizará essas informações para verificar as regras
+// de negócio antes de permitir que o orçamento seja salvo.
+const buscarDadosParaProposta = async (id) => {
+
+    return prisma.pedido.findUnique({
+        where: { id },
+
+        select: {
+            // Identificação do pedido.
+            id: true,
+
+            // Verifica se o pedido ainda está PENDENTE.
+            status: true,
+
+            // Verifica se o pedido está na área de descarte.
+            descartadoEm: true,
+
+            // Taxa registrada quando o cliente criou o pedido.
+            // A taxa final não poderá ser inferior a esse valor.
+            taxaDeslocamentoEstimada: true,
+
+            // Data e turno originalmente solicitados pelo cliente.
+            // Serão utilizados para verificar se Júnior realmente
+            // está propondo uma data ou um turno diferente.
+            dataPreferida: true,
+            turnoPreferido: true
+        }
+    });
+};
+
+
+// Busca um serviço pelo ID, mas somente se estiver ativo.
+// Júnior poderá corrigir o serviço informado pelo cliente,
+// desde que o novo serviço esteja disponível para atendimento.
+const buscarServicoAtivoPorId = async (id) => {
+
+    return prisma.servico.findFirst({
+        where: {
+            id,
+            ativo: true
+        },
+
+        select: {
+            id: true,
+            nome: true,
+            ativo: true
+        }
+    });
+};
+
+
+// Salva a proposta de orçamento de um pedido pendente.
+// Atualiza o serviço, o valor previsto e a taxa final.
+//
+// Se Júnior informar um reagendamento, também registra
+// a nova data e o turno na tabela Reagendamento.
+//
+// Todas as operações são executadas em uma transação Prisma.
+const salvarProposta = async (id, dados, administradorId) => {
+
+    return await prisma.$transaction(async (tx) => {
+
+        // 1. ATUALIZAR OS DADOS FINANCEIROS E O STATUS DO PEDIDO
+        const pedidoAntesDaAtualizacao = await tx.pedido.findUnique({
+            where: { id },
+            select: {
+                status: true
+            }
+        });
+
+        // Atualizamos somente os campos permitidos.
+        // A taxa de deslocamento original permanece inalterada.
+        //
+        // O Service já validou a taxa final e calculou o total.
+        //
+        // Permitimos salvar quando o pedido está PENDENTE
+        // ou ACEITO_POR_JUNIOR (proposta salva, ainda não enviada).
+        //
+        // O updateMany verifica novamente essas condições
+        // para evitar alterações indevidas no pedido.
+        const resultado = await tx.pedido.updateMany({
+            where: {
+                id,
+                status: {
+                    in: ["PENDENTE", "ACEITO_POR_JUNIOR"]
+                },
+                descartadoEm: null
+            },
+
+            data: {
+                servicoId: dados.servicoId,
+                valorPrevisto: dados.valorPrevisto,
+                taxaDeslocamentoFinal: dados.taxaDeslocamentoFinal,
+                status: "ACEITO_POR_JUNIOR"
+            }
+        });
+
+        // updateMany retorna a quantidade de registros atualizados.
+        // Como estamos filtrando pelo ID, esperamos exatamente 1.
+        //
+        // Se nenhum pedido foi atualizado, interrompemos a transação.
+        if (resultado.count !== 1) {
+            throw new AppError(
+                "O pedido não está mais disponível para salvar ou editar a proposta.",
+                409
+            );
+        }
+
+        // Registra a mudança de status na mesma transação do orçamento.
+        // Edições posteriores de uma proposta já salva não geram
+        // um histórico redundante do mesmo status.
+        if (
+            pedidoAntesDaAtualizacao.status !==
+            "ACEITO_POR_JUNIOR"
+        ) {
+            await tx.historicoStatus.create({
+                data: {
+                    pedidoId: id,
+                    administradorId,
+                    statusAnterior: pedidoAntesDaAtualizacao.status,
+                    statusNovo: "ACEITO_POR_JUNIOR",
+                    observacao: "Proposta de orçamento salva."
+                }
+            });
+        }
+
+        // 2. VERIFICAR SE EXISTE UM RASCUNHO DE REAGENDAMENTO
+
+        // Procuramos uma proposta de nova data ainda sem resposta.
+        // Nesta rota, o pedido só pode estar em uma etapa
+        // anterior ao envio da proposta pelo WhatsApp.
+        //
+        // O registro mais recente será utilizado para edição.
+        const reagendamentoExistente =
+            await tx.reagendamento.findFirst({
+                where: {
+                    pedidoId: id,
+                    aceito: null
+                },
+
+                orderBy: [
+                    { criadoEm: "desc" },
+                    { id: "desc" }
+                ],
+
+                select: {
+                    id: true
+                }
+            });
+
+        // 3. REGISTRAR OU ATUALIZAR O REAGENDAMENTO OPCIONAL
+
+        // Se Júnior informou uma nova data, salvamos a proposta.
+        if (dados.reagendamento) {
+
+            // Se já existe um rascunho, atualizamos o registro.
+            if (reagendamentoExistente) {
+
+                await tx.reagendamento.update({
+                    where: {
+                        id: reagendamentoExistente.id
+                    },
+
+                    data: {
+                        novaData: dados.reagendamento.novaData,
+                        novoTurno: dados.reagendamento.novoTurno,
+                        motivo: dados.reagendamento.motivo
+                    }
+                });
+
+            } else {
+
+                // Se não existe rascunho, criamos um novo registro.
+                // aceito = null indica ausência de resposta do cliente.
+                await tx.reagendamento.create({
+                    data: {
+                        pedidoId: id,
+                        novaData: dados.reagendamento.novaData,
+                        novoTurno: dados.reagendamento.novoTurno,
+                        motivo: dados.reagendamento.motivo,
+                        aceito: null
+                    }
+                });
+            }
+
+        } else {
+
+            // Se Júnior salvou o orçamento sem uma nova data,
+            // removemos os rascunhos de reagendamento sem resposta.
+            //
+            // Isso vale para a proposta inicial, antes do envio.
+            await tx.reagendamento.deleteMany({
+                where: {
+                    pedidoId: id,
+                    aceito: null
+                }
+            });
+        }
+
+        // 4. BUSCAR OS DADOS ATUALIZADOS
+
+        // Consultamos novamente o pedido para retornar
+        // os dados finais do orçamento ao Service.
+        const pedidoAtualizado = await tx.pedido.findUnique({
+            where: { id },
+
+            select: {
+                id: true,
+                status: true,
+                servicoId: true,
+                valorPrevisto: true,
+                taxaDeslocamentoEstimada: true,
+                taxaDeslocamentoFinal: true,
+                dataPreferida: true,
+                turnoPreferido: true,
+                atualizadoEm: true,
+
+                // Retorna a proposta de nova data, caso exista.
+                reagendamentos: {
+                    where: {
+                        aceito: null
+                    },
+
+                    orderBy: [
+                        { criadoEm: "desc" },
+                        { id: "desc" }
+                    ],
+
+                    take: 1,
+
+                    select: {
+                        id: true,
+                        novaData: true,
+                        novoTurno: true,
+                        motivo: true,
+                        aceito: true
+                    }
+                }
+            }
+        });
+
+        // 5. RETORNAR A PROPOSTA ATUALIZADA
+
+        // O pedido agora estará ACEITO_POR_JUNIOR.
+        // Isso significa que o orçamento foi salvo,
+        // mas ainda não foi enviado pelo WhatsApp.
+        //
+        // O totalEstimado será acrescentado pelo Service.
+        //
+        // Se qualquer operação falhar, a transação será revertida.
+        return pedidoAtualizado;
+    });
+};
+
+
 export default {
     buscarCidadePorId,
     buscarServicoPorId,
     buscarPorId,
     listarPedidos,
-    criarPedido
+    criarPedido,
+
+    // Métodos utilizados na proposta de orçamento.
+    buscarDadosParaProposta,
+    buscarServicoAtivoPorId,
+    salvarProposta
 };
