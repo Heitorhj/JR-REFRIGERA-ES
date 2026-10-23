@@ -103,14 +103,25 @@ const buscarPorId = async (id) => {
 // Permite filtrar por status e navegar entre páginas.
 const listarPedidos = async ({ page, limit, status }, descartados = false) => {
 
+    // ==================================================
     // 1. PREPARAR OS FILTROS
+    // ==================================================
 
-    // Por padrão, buscamos somente pedidos não descartados.
-    // O campo descartadoEm será preenchido quando um pedido
-    // for enviado para a área de descarte.
+    // Por padrão, buscamos somente pedidos que
+    // não foram enviados para a lixeira.
+    //
+    // descartadoEm = null significa que o pedido
+    // ainda não foi descartado.
+
     const where = {
         descartadoEm: null
     };
+
+    // Se descartados for true, buscamos somente
+    // pedidos que estão na lixeira.
+    //
+    // not: null significa diferente de null.
+    // Ou seja, o pedido possui uma data de descarte.
 
     if (descartados) {
         where.descartadoEm = {
@@ -119,97 +130,144 @@ const listarPedidos = async ({ page, limit, status }, descartados = false) => {
     }
 
     // Se o administrador informou um status,
-    // adicionamos esse filtro à consulta.
+    // adicionamos esse status aos filtros da consulta.
+    //
     // Exemplo: where.status = "PENDENTE".
+    //
+    // Caso não tenha informado, buscamos pedidos
+    // de todos os status permitidos pela consulta.
+
     if (status !== undefined) {
         where.status = status;
     }
 
-    // 2. CALCULAR A PAGINAÇÃO
 
-    // page representa qual página desejamos visualizar.
-    // limit representa quantos pedidos queremos por página.
+    // ==================================================
+    // 2. CALCULAR A PAGINAÇÃO
+    // ==================================================
+
+    // page representa a página solicitada.
+    // limit representa a quantidade de pedidos por página.
     //
-    // Exemplo: page = 2 e limit = 10.
-    // skip = (2 - 1) * 10 = 10.
+    // Exemplo:
+    // page = 2
+    // limit = 10
     //
-    // O Prisma ignorará os primeiros 10 pedidos
-    // da lista filtrada e ordenada.
+    // skip = (2 - 1) * 10 = 10
+    //
+    // Assim, ignoramos os primeiros 10 registros
+    // e buscamos os próximos 10.
+
     const skip = (page - 1) * limit;
 
-    // 3. CONSULTAR PEDIDOS E QUANTIDADE TOTAL
 
-    // Promise.all executa as duas consultas sem precisar
-    // aguardar a primeira terminar para iniciar a segunda.
+    // ==================================================
+    // 3. BUSCAR OS PEDIDOS NO BANCO
+    // ==================================================
+
+    // findMany busca vários pedidos.
     //
-    // findMany: busca os pedidos da página solicitada.
-    // count: conta todos os pedidos que atendem aos filtros,
-    // independentemente da página.
-    //
-    // O resultado é um array:
-    // [listaDePedidos, quantidadeTotal].
-    const [pedidos, total] = await Promise.all([
+    // Utilizamos o objeto where para aplicar os filtros.
+    // skip determina quantos registros serão ignorados.
+    // take determina quantos registros serão retornados.
 
-        prisma.pedido.findMany({
-            where,
+    const pedidos = await prisma.pedido.findMany({
 
-            // Ordena do pedido mais recente para o mais antigo.
-            // O ID desempata pedidos com a mesma data de criação.
-            orderBy: [
-                { criadoEm: "desc" },
-                { id: "desc" }
-            ],
+        where,
 
-            // Quantos registros serão ignorados.
-            skip,
+        // Ordenamos os pedidos do mais recente
+        // para o mais antigo.
+        //
+        // Se dois pedidos tiverem a mesma data,
+        // utilizamos o ID para desempatar.
 
-            // Quantos registros, no máximo, serão retornados.
-            take: limit,
+        orderBy: [
+            { criadoEm: "desc" },
+            { id: "desc" }
+        ],
 
-            // Seleciona somente os campos necessários ao painel.
-            select: {
-                id: true,
-                status: true,
-                dataPreferida: true,
-                turnoPreferido: true,
-                taxaDeslocamentoEstimada: true,
-                criadoEm: true,
+        // Ignora os registros das páginas anteriores.
 
-                // Inclui nome e WhatsApp do cliente associado.
-                cliente: {
-                    select: {
-                        nome: true,
-                        whatsapp: true
-                    }
-                },
+        skip,
 
-                // Inclui o nome da cidade.
-                cidade: {
-                    select: {
-                        nome: true
-                    }
-                },
+        // Define quantos pedidos serão retornados.
 
-                // Inclui o nome do serviço solicitado.
-                servico: {
-                    select: {
-                        nome: true
-                    }
+        take: limit,
+
+        // Seleciona somente os campos necessários
+        // para apresentar os pedidos no painel.
+
+        select: {
+            id: true,
+            status: true,
+            dataPreferida: true,
+            turnoPreferido: true,
+            taxaDeslocamentoEstimada: true,
+            criadoEm: true,
+
+            // Busca também o nome e o WhatsApp
+            // do cliente associado ao pedido.
+
+            cliente: {
+                select: {
+                    nome: true,
+                    whatsapp: true
+                }
+            },
+
+            // Busca o nome da cidade relacionada.
+
+            cidade: {
+                select: {
+                    nome: true
+                }
+            },
+
+            // Busca o nome do serviço solicitado.
+
+            servico: {
+                select: {
+                    nome: true
                 }
             }
-        }),
+        }
+    });
 
-        // Conta todos os pedidos que atendem aos mesmos filtros.
-        // Não utiliza skip nem take, pois precisamos do total
-        // para calcular quantas páginas existem.
-        prisma.pedido.count({
-            where
-        })
-    ]);
 
-    // Retorna os pedidos encontrados e o total.
-    // O Service utilizará essas informações para
-    // montar a resposta com os dados de paginação.
+    // ==================================================
+    // 4. CONTAR A QUANTIDADE TOTAL DE PEDIDOS
+    // ==================================================
+
+    // count conta quantos pedidos existem no banco
+    // considerando os mesmos filtros utilizados acima.
+    //
+    // Não utilizamos skip nem take aqui.
+    //
+    // Exemplo:
+    // Existem 35 pedidos pendentes.
+    // O findMany retorna 10 pedidos da página solicitada.
+    // O count retorna 35, pois conta todos os pendentes.
+    //
+    // Esse total será utilizado pelo Service
+    // para calcular quantas páginas existem.
+
+    const total = await prisma.pedido.count({
+        where
+    });
+
+
+    // ==================================================
+    // 5. RETORNAR OS RESULTADOS
+    // ==================================================
+
+    // Devolvemos:
+    //
+    // pedidos: os registros encontrados na página.
+    // total: a quantidade total que atende aos filtros.
+    //
+    // O Service utilizará essas informações
+    // para montar a resposta com a paginação.
+
     return {
         pedidos,
         total
