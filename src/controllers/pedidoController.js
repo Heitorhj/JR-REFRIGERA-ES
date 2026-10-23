@@ -68,6 +68,24 @@ const informarEnvioManualProposta = async (req, res, next) => {
     }
 };
 
+const registrarRespostaCliente = async (req, res, next) => {
+    try {
+        const resultado = await pedidoService.registrarRespostaCliente(
+            req.dados.id,
+            req.dados.resposta,
+            req.administrador.id
+        );
+
+        return res.status(200).json({
+            mensagem: "Resposta do cliente registrada manualmente.",
+            respostaRegistradaManualmente: true,
+            resultado
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 
 const salvarProposta = async (req, res, next) => {
     try {
@@ -115,6 +133,7 @@ export default {
     buscarPorId,
     gerarLinkWhatsappProposta,
     informarEnvioManualProposta,
+    registrarRespostaCliente,
     cadastrarPedido,
     salvarProposta
 };

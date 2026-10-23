@@ -55,4 +55,11 @@ adminPedidoRoutes.post(
     pedidoController.informarEnvioManualProposta
 );
 
+adminPedidoRoutes.post(
+    "/:id/resposta",
+    loginRequired,
+    pedidoValidator.validarRespostaCliente,
+    pedidoController.registrarRespostaCliente
+);
+
 export { pedidoRoutes, adminPedidoRoutes };

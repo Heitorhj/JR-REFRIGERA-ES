@@ -3,6 +3,7 @@ import { afterEach, test } from "node:test";
 import pedidoRepository from "../src/repositories/pedidoRepository.js";
 import pedidoService from "../src/services/pedidoService.js";
 import loginRequired from "../src/middleware/loginRequired.js";
+import pedidoValidator from "../src/validators/pedidoValidator.js";
 import prisma from "../src/db/prisma.js";
 
 const originais = {
@@ -10,6 +11,8 @@ const originais = {
         pedidoRepository.buscarDadosParaEnvioManualProposta,
     registrarEnvioManualProposta:
         pedidoRepository.registrarEnvioManualProposta,
+    registrarRespostaCliente:
+        pedidoRepository.registrarRespostaCliente,
     transaction: prisma.$transaction
 };
 
@@ -18,6 +21,8 @@ afterEach(() => {
         originais.buscarDadosParaEnvioManualProposta;
     pedidoRepository.registrarEnvioManualProposta =
         originais.registrarEnvioManualProposta;
+    pedidoRepository.registrarRespostaCliente =
+        originais.registrarRespostaCliente;
     prisma.$transaction = originais.transaction;
 });
 
@@ -182,6 +187,194 @@ test("middleware bloqueia usuário sem autenticação", async () => {
 
     assert.equal(res.code, 401);
     assert.equal(nextChamado, false);
+});
+
+test("validator aceita ações de resposta e rejeita campos inválidos", () => {
+    const req = {
+        params: { id: "17" },
+        body: {
+            acao: "NEGOCIAR",
+            observacao: "Cliente quer avaliar outra data."
+        }
+    };
+    let continuou = false;
+
+    pedidoValidator.validarRespostaCliente(
+        req,
+        {
+            status(code) {
+                this.codigo = code;
+                return this;
+            },
+            json(body) {
+                this.corpo = body;
+            }
+        },
+        () => {
+            continuou = true;
+        }
+    );
+
+    assert.equal(continuou, true);
+    assert.equal(req.dados.id, 17);
+    assert.equal(req.dados.resposta.acao, "NEGOCIAR");
+
+    const reqInvalida = {
+        params: { id: "17" },
+        body: { acao: "ACEITAR", status: "CONFIRMADO" }
+    };
+    const resInvalida = {
+        status(code) {
+            this.codigo = code;
+            return this;
+        },
+        json(body) {
+            this.corpo = body;
+        }
+    };
+
+    pedidoValidator.validarRespostaCliente(reqInvalida, resInvalida, () => {
+        assert.fail("Não deve aceitar campos extras.");
+    });
+
+    assert.equal(resInvalida.codigo, 400);
+});
+
+test("resposta aceita confirma; negociar e cancelar mudam para status adequados", async () => {
+    const pedidos = [
+        {
+            acao: "ACEITAR",
+            status: "CONFIRMADO"
+        },
+        {
+            acao: "NEGOCIAR",
+            status: "EM_NEGOCIACAO"
+        },
+        {
+            acao: "CANCELAR",
+            status: "CANCELADO"
+        }
+    ];
+
+    for (const caso of pedidos) {
+        pedidoRepository.buscarDadosParaEnvioManualProposta =
+            async () => criarPedidoProposta({ status: "AGUARDANDO_CLIENTE" });
+        pedidoRepository.registrarRespostaCliente =
+            async (id, administradorId, acao, observacao, novoStatus) => {
+                assert.equal(id, 17);
+                assert.equal(administradorId, 5);
+                assert.equal(acao, caso.acao);
+                assert.equal(observacao, "Resposta confirmada por telefone.");
+                assert.equal(novoStatus, caso.status);
+                return { status: novoStatus };
+            };
+
+        const resultado = await pedidoService.registrarRespostaCliente(
+            17,
+            {
+                acao: caso.acao,
+                observacao: "Resposta confirmada por telefone."
+            },
+            5
+        );
+
+        assert.equal(resultado.status, caso.status);
+    }
+});
+
+test("não registra resposta se pedido ainda não aguarda cliente", async () => {
+    pedidoRepository.buscarDadosParaEnvioManualProposta =
+        async () => criarPedidoProposta({ status: "ACEITO_POR_JUNIOR" });
+
+    await assert.rejects(
+        pedidoService.registrarRespostaCliente(17, { acao: "ACEITAR" }, 5),
+        (error) => error.statusCode === 409
+    );
+});
+
+test("resposta cliente atualiza estado, reage ao rascunho enviado e grava histórico atomicamente", async () => {
+    let dadosAtualizacao;
+    let reagendamentoAtualizado;
+    let historico;
+    prisma.$transaction = (operacao) => operacao({
+        pedido: {
+            async updateMany({ where, data }) {
+                assert.equal(where.id, 17);
+                assert.equal(where.status, "AGUARDANDO_CLIENTE");
+                dadosAtualizacao = data;
+                return { count: 1 };
+            }
+        },
+        reagendamento: {
+            async updateMany({ where, data }) {
+                reagendamentoAtualizado = { where, data };
+                return { count: 1 };
+            }
+        },
+        historicoStatus: {
+            async create({ data }) {
+                historico = data;
+                return { criadoEm: new Date("2026-10-23T03:00:00.000Z") };
+            }
+        }
+    });
+
+    const resultado = await pedidoRepository.registrarRespostaCliente(
+        17,
+        5,
+        "ACEITAR",
+        "Cliente aceitou a proposta.",
+        "CONFIRMADO"
+    );
+
+    assert.equal(dadosAtualizacao.status, "CONFIRMADO");
+    assert.equal(Object.hasOwn(dadosAtualizacao, "descartadoEm"), false);
+    assert.equal(reagendamentoAtualizado.where.pedidoId, 17);
+    assert.equal(reagendamentoAtualizado.data.aceito, true);
+    assert.equal(historico.administradorId, 5);
+    assert.equal(historico.statusAnterior, "AGUARDANDO_CLIENTE");
+    assert.equal(historico.statusNovo, "CONFIRMADO");
+    assert.equal(resultado.status, "CONFIRMADO");
+});
+
+test("negociação e cancelamento não classificam a data proposta como recusada", async () => {
+    for (const caso of [
+        { acao: "NEGOCIAR", status: "EM_NEGOCIACAO" },
+        { acao: "CANCELAR", status: "CANCELADO" }
+    ]) {
+        let dadosAtualizacao;
+        let reagendamentoAlterado = false;
+        prisma.$transaction = (operacao) => operacao({
+            pedido: {
+                async updateMany({ data }) {
+                    dadosAtualizacao = data;
+                    return { count: 1 };
+                }
+            },
+            reagendamento: {
+                async updateMany() {
+                    reagendamentoAlterado = true;
+                    return { count: 1 };
+                }
+            },
+            historicoStatus: {
+                async create() {
+                    return { criadoEm: new Date("2026-10-23T03:00:00.000Z") };
+                }
+            }
+        });
+
+        await pedidoRepository.registrarRespostaCliente(
+            17,
+            5,
+            caso.acao,
+            undefined,
+            caso.status
+        );
+
+        assert.deepEqual(dadosAtualizacao, { status: caso.status });
+        assert.equal(reagendamentoAlterado, false);
+    }
 });
 
 test("transição atualiza status e grava administrador e horário na transação", async () => {

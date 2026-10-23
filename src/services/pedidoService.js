@@ -166,6 +166,51 @@ class PedidoService {
         };
     }
 
+    async registrarRespostaCliente(id, resposta, administradorId) {
+        const pedido = await pedidoRepository.buscarDadosParaEnvioManualProposta(id);
+
+        if (!pedido) {
+            throw new AppError("Pedido não encontrado.", 404);
+        }
+
+        if (pedido.descartadoEm !== null) {
+            throw new AppError("Não é possível registrar resposta de pedido descartado.", 409);
+        }
+
+        if (pedido.status !== "AGUARDANDO_CLIENTE") {
+            throw new AppError("A resposta só pode ser registrada após informar o envio da proposta.", 409);
+        }
+
+        let novoStatus = "";
+
+        if (resposta.acao === "ACEITAR") {
+            if (
+                !Number.isSafeInteger(pedido.valorPrevisto) ||
+                pedido.valorPrevisto <= 0 ||
+                !Number.isSafeInteger(pedido.taxaDeslocamentoFinal) ||
+                pedido.taxaDeslocamentoFinal < 0
+            ) {
+                throw new AppError("A proposta está incompleta e não pode ser confirmada.", 409);
+            }
+
+            novoStatus = "CONFIRMADO";
+        } else if (resposta.acao === "NEGOCIAR") {
+            novoStatus = "EM_NEGOCIACAO";
+        } else if (resposta.acao === "CANCELAR") {
+            novoStatus = "CANCELADO";
+        } else {
+            throw new AppError("Ação de resposta inválida.", 400);
+        }
+
+        return pedidoRepository.registrarRespostaCliente(
+            id,
+            administradorId,
+            resposta.acao,
+            resposta.observacao,
+            novoStatus
+        );
+    }
+
     async cadastrarPedido(dados) {
         const {
             nome,

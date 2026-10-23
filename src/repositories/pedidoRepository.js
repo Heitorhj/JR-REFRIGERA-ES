@@ -431,6 +431,74 @@ const registrarEnvioManualProposta = async (id, administradorId) => {
     });
 };
 
+// Saves the administrator-reported customer response and its status history
+// together, only if the proposal is still waiting for the customer's response.
+const registrarRespostaCliente = async (
+    id,
+    administradorId,
+    acao,
+    observacao,
+    novoStatus
+) => {
+    return prisma.$transaction(async (tx) => {
+        const resultado = await tx.pedido.updateMany({
+            where: {
+                id,
+                status: "AGUARDANDO_CLIENTE",
+                descartadoEm: null
+            },
+            data: {
+                status: novoStatus
+            }
+        });
+
+        if (resultado.count !== 1) {
+            throw new AppError(
+                "O pedido mudou ou não está mais aguardando resposta.",
+                409
+            );
+        }
+
+        // Only an explicit acceptance answers the proposed date. Negotiating
+        // or cancelling the order must not be recorded as rejecting that date.
+        if (acao === "ACEITAR") {
+            await tx.reagendamento.updateMany({
+                where: {
+                    pedidoId: id,
+                    aceito: null
+                },
+                data: {
+                    aceito: true
+                }
+            });
+        }
+
+        let textoObservacao = `Resposta recebida e informada manualmente: ${acao}.`;
+
+        if (observacao) {
+            textoObservacao += ` ${observacao}`;
+        }
+
+        const historico = await tx.historicoStatus.create({
+            data: {
+                pedidoId: id,
+                administradorId,
+                statusAnterior: "AGUARDANDO_CLIENTE",
+                statusNovo: novoStatus,
+                observacao: textoObservacao
+            },
+            select: {
+                criadoEm: true
+            }
+        });
+
+        return {
+            status: novoStatus,
+            registradoEm: historico.criadoEm
+        };
+    });
+};
+
 
 // Salva a proposta de orçamento de um pedido pendente.
 // Atualiza o serviço, o valor previsto e a taxa final.
@@ -648,5 +716,6 @@ export default {
     buscarServicoAtivoPorId,
     buscarDadosParaEnvioManualProposta,
     registrarEnvioManualProposta,
+    registrarRespostaCliente,
     salvarProposta
 };

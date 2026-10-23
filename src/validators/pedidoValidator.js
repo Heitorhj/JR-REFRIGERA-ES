@@ -53,6 +53,70 @@ const validarBuscaPorId = (req, res, next) => {
     return next();
 };
 
+const validarRespostaCliente = (req, res, next) => {
+    const id = Number(req.params.id);
+
+    if (!Number.isSafeInteger(id) || id <= 0) {
+        return res.status(400).json({
+            mensagem: "ID do pedido inválido."
+        });
+    }
+
+    const corpo = req.body ?? {};
+    const camposPermitidos = ["acao", "observacao"];
+    const camposInvalidos = Object.keys(corpo).filter(
+        (campo) => !camposPermitidos.includes(campo)
+    );
+
+    if (camposInvalidos.length > 0) {
+        return res.status(400).json({
+            mensagem: `Campos não permitidos: ${camposInvalidos.join(", ")}.`
+        });
+    }
+
+    const acoesPermitidas = ["ACEITAR", "NEGOCIAR", "CANCELAR"];
+
+    if (typeof corpo.acao !== "string" || !acoesPermitidas.includes(corpo.acao)) {
+        return res.status(400).json({
+            mensagem: "Ação inválida. Use ACEITAR, NEGOCIAR ou CANCELAR."
+        });
+    }
+
+    let observacao = null;
+
+    if (corpo.observacao !== undefined && corpo.observacao !== null) {
+        if (typeof corpo.observacao !== "string") {
+            return res.status(400).json({
+                mensagem: "Observação inválida."
+            });
+        }
+
+        observacao = corpo.observacao.trim();
+
+        if (observacao.length > 1000) {
+            return res.status(400).json({
+                mensagem: "A observação deve ter no máximo 1000 caracteres."
+            });
+        }
+
+        if (observacao.length === 0) {
+            observacao = null;
+        }
+    }
+
+    if (!req.dados) {
+        req.dados = {};
+    }
+
+    req.dados.id = id;
+    req.dados.resposta = {
+        acao: corpo.acao,
+        observacao
+    };
+
+    return next();
+};
+
 // ==================================================
 // 2. VALIDAR CADASTRO DE PEDIDOS (PÚBLICO)
 // ==================================================
@@ -417,6 +481,7 @@ const validarProposta = (req, res, next) => {
 export default {
     validarListagem,
     validarBuscaPorId,
+    validarRespostaCliente,
     validarCadastroPedidos,
     validarProposta
 };
