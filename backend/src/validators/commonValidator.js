@@ -17,8 +17,8 @@ const validarSenha = (senha) => {
         return "Senha obrigatória.";
     }
 
-    if (senha.length < 8 || senha.length > 12) {
-        return "A senha deve ter entre 8 e 12 caracteres.";
+    if (senha.length < 8 || senha.length > 72) {
+        return "A senha deve ter entre 8 e 72 caracteres.";
     }
 
     return null;

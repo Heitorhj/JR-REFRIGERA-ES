@@ -1,3 +1,4 @@
+import SelectField from "../SelectField.jsx";
 import "../../styles/order-filters.css";
 
 const statusOptions = [
@@ -18,21 +19,22 @@ const statusOptions = [
 function OrderFilters({ status, trash, onStatusChange, onTrashChange }) {
   return (
     <div className="order-filters">
-      <label className="filter-select">
-        <span>Status</span>
-        <select value={status} onChange={(event) => onStatusChange(event.target.value)}>
-          {statusOptions.map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-      </label>
+      <div className="filter-select">
+        <span>Filtrar</span>
+        <SelectField
+          id="filtro-status-campo"
+          name="status"
+          value={status}
+          options={statusOptions.map(([value, label]) => ({ value, label }))}
+          onChange={(event) => onStatusChange(event.target.value)}
+        />
+      </div>
       <button
         type="button"
         className={`trash-toggle${trash ? " is-active" : ""}`}
         aria-pressed={trash}
         onClick={() => onTrashChange(!trash)}
       >
-        <span aria-hidden="true">{trash ? "←" : "▱"}</span>
         {trash ? "Voltar aos pedidos" : "Ver lixeira"}
       </button>
     </div>

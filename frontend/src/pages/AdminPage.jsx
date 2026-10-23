@@ -19,7 +19,7 @@ function AdminPage() {
         <div>
           <span className="eyebrow">Painel administrativo</span>
           <h1>Olá, {usuario?.nome?.split(" ")[0] ?? "Júnior"}</h1>
-          <p>Acompanhe solicitações, cadastros e regras de atendimento.</p>
+          <p>Este é o seu espaço para cuidar de cada atendimento, com calma.</p>
         </div>
         <div className="admin-toolbar">
           <div className="admin-views" role="tablist" aria-label="Visões do painel administrativo">
