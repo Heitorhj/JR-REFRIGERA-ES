@@ -23,6 +23,12 @@ cidadeRoutes.get(
 // Rotas administrativas
 //-----------------------
 
+adminCidadeRoutes.get(
+    "/",
+    loginRequired,
+    cidadeController.listarTodasCidades
+);
+
 //Cadastrar cidadades
 adminCidadeRoutes.post(
     "/",
