@@ -33,6 +33,68 @@ const listarPedidos = async (req, res, next) => {
     }
 };
 
+const listarPedidosDescartados = async (req, res, next) => {
+    try {
+        const resultado = await pedidoService.listarPedidosDescartados(
+            req.dados.query
+        );
+
+        return res.status(200).json(resultado);
+    } catch (error) {
+        return next(error);
+    }
+};
+
+const reagendarPedido = async (req, res, next) => {
+    try {
+        const resultado = await pedidoService.reagendarPedido(
+            req.dados.id,
+            req.dados.reagendamento,
+            req.administrador.id
+        );
+
+        return res.status(200).json({
+            mensagem: "Atendimento reagendado com sucesso.",
+            reagendamento: resultado
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+const cancelarPedido = async (req, res, next) => {
+    try {
+        const resultado = await pedidoService.cancelarPedido(
+            req.dados.id,
+            req.dados.motivo,
+            req.administrador.id
+        );
+
+        return res.status(200).json({
+            mensagem: "Pedido cancelado e enviado para a lixeira.",
+            pedido: resultado
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+const concluirPedido = async (req, res, next) => {
+    try {
+        const resultado = await pedidoService.concluirPedido(
+            req.params.id,
+            req.administrador.id
+        );
+
+        return res.status(200).json({
+            mensagem: "Atendimento concluído com sucesso.",
+            pedido: resultado
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 const buscarPorId = async (req, res, next) => {
     try {
         const pedido = await pedidoService.buscarPorId(req.params.id);
@@ -130,6 +192,10 @@ const salvarProposta = async (req, res, next) => {
 
 export default {
     listarPedidos,
+    listarPedidosDescartados,
+    reagendarPedido,
+    cancelarPedido,
+    concluirPedido,
     buscarPorId,
     gerarLinkWhatsappProposta,
     informarEnvioManualProposta,

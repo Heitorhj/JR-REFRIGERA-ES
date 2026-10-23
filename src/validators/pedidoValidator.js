@@ -125,6 +125,135 @@ const validarRespostaCliente = (req, res, next) => {
     return next();
 };
 
+const validarCancelamento = (req, res, next) => {
+    const id = Number(req.params.id);
+
+    if (!Number.isSafeInteger(id) || id <= 0) {
+        return res.status(400).json({
+            mensagem: "ID do pedido inválido."
+        });
+    }
+
+    const corpo = req.body ?? {};
+    const camposInvalidos = Object.keys(corpo).filter(
+        (campo) => campo !== "motivo"
+    );
+
+    if (camposInvalidos.length > 0) {
+        return res.status(400).json({
+            mensagem: `Campos não permitidos: ${camposInvalidos.join(", ")}.`
+        });
+    }
+
+    let motivo = null;
+
+    if (corpo.motivo !== undefined && corpo.motivo !== null) {
+        if (typeof corpo.motivo !== "string") {
+            return res.status(400).json({
+                mensagem: "Motivo do cancelamento inválido."
+            });
+        }
+
+        motivo = corpo.motivo.trim();
+
+        if (motivo.length > 1000) {
+            return res.status(400).json({
+                mensagem: "O motivo deve ter no máximo 1000 caracteres."
+            });
+        }
+
+        if (motivo.length === 0) {
+            motivo = null;
+        }
+    }
+
+    if (!req.dados) {
+        req.dados = {};
+    }
+
+    req.dados.id = id;
+    req.dados.motivo = motivo;
+
+    return next();
+};
+
+const validarReagendamento = (req, res, next) => {
+    const id = Number(req.params.id);
+
+    if (!Number.isSafeInteger(id) || id <= 0) {
+        return res.status(400).json({
+            mensagem: "ID do pedido inválido."
+        });
+    }
+
+    const corpo = req.body ?? {};
+    const camposPermitidos = ["novaData", "novoTurno", "motivo"];
+    const camposInvalidos = Object.keys(corpo).filter(
+        (campo) => !camposPermitidos.includes(campo)
+    );
+
+    if (camposInvalidos.length > 0) {
+        return res.status(400).json({
+            mensagem: `Campos não permitidos: ${camposInvalidos.join(", ")}.`
+        });
+    }
+
+    if (typeof corpo.novaData !== "string") {
+        return res.status(400).json({
+            mensagem: "Nova data inválida, inexistente ou no passado."
+        });
+    }
+
+    const dataNormalizada = formatarData(corpo.novaData);
+
+    if (!dataNormalizada) {
+        return res.status(400).json({
+            mensagem: "Nova data inválida, inexistente ou no passado."
+        });
+    }
+
+    if (corpo.novoTurno !== "MANHA" && corpo.novoTurno !== "TARDE") {
+        return res.status(400).json({
+            mensagem: "O novo turno deve ser MANHA ou TARDE."
+        });
+    }
+
+    let motivo = null;
+
+    if (corpo.motivo !== undefined && corpo.motivo !== null) {
+        if (typeof corpo.motivo !== "string") {
+            return res.status(400).json({
+                mensagem: "Motivo do reagendamento inválido."
+            });
+        }
+
+        motivo = corpo.motivo.trim();
+
+        if (motivo.length > 500) {
+            return res.status(400).json({
+                mensagem: "O motivo deve ter no máximo 500 caracteres."
+            });
+        }
+
+        if (motivo.length === 0) {
+            motivo = null;
+        }
+    }
+
+    if (!req.dados) {
+        req.dados = {};
+    }
+
+    req.dados.id = id;
+    req.dados.reagendamento = {
+        novaData: dataNormalizada,
+        novoTurno: corpo.novoTurno,
+        motivo
+    };
+
+    return next();
+};
+
 // ==================================================
 // 2. VALIDAR CADASTRO DE PEDIDOS (PÚBLICO)
 // ==================================================
@@ -490,6 +619,8 @@ export default {
     validarListagem,
     validarBuscaPorId,
     validarRespostaCliente,
+    validarCancelamento,
+    validarReagendamento,
     validarCadastroPedidos,
     validarProposta
 };

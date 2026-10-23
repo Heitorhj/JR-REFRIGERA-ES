@@ -26,10 +26,38 @@ adminPedidoRoutes.get(
 );
 
 adminPedidoRoutes.get(
+    "/lixeira",
+    loginRequired,
+    pedidoValidator.validarListagem,
+    pedidoController.listarPedidosDescartados
+);
+
+adminPedidoRoutes.get(
     "/:id",
     loginRequired,
     pedidoValidator.validarBuscaPorId,
     pedidoController.buscarPorId
+);
+
+adminPedidoRoutes.post(
+    "/:id/reagendamentos",
+    loginRequired,
+    pedidoValidator.validarReagendamento,
+    pedidoController.reagendarPedido
+);
+
+adminPedidoRoutes.post(
+    "/:id/cancelamento",
+    loginRequired,
+    pedidoValidator.validarCancelamento,
+    pedidoController.cancelarPedido
+);
+
+adminPedidoRoutes.post(
+    "/:id/conclusao",
+    loginRequired,
+    pedidoValidator.validarBuscaPorId,
+    pedidoController.concluirPedido
 );
 
 // Opens a manually prepared message; generating this URL does not record sending.

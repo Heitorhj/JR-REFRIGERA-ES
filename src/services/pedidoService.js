@@ -13,8 +13,8 @@ class PedidoService {
         return pedido;
     }
 
-    async listarPedidos(filtros) {
-        const resultado = await pedidoRepository.listarPedidos(filtros);
+    async listarPedidos(filtros, descartados = false) {
+        const resultado = await pedidoRepository.listarPedidos(filtros, descartados);
 
         return {
             pedidos: resultado.pedidos,
@@ -25,6 +25,103 @@ class PedidoService {
                 totalPaginas: Math.ceil(resultado.total / filtros.limit)
             }
         };
+    }
+
+    async listarPedidosDescartados(filtros) {
+        return this.listarPedidos(filtros, true);
+    }
+
+    async reagendarPedido(id, dados, administradorId) {
+        const pedido = await pedidoRepository.buscarDadosParaReagendar(id);
+
+        if (!pedido) {
+            throw new AppError("Pedido não encontrado.", 404);
+        }
+
+        if (pedido.descartadoEm !== null) {
+            throw new AppError("Não é possível reagendar um pedido descartado.", 409);
+        }
+
+        const statusPermitidos = [
+            "CONFIRMADO",
+            "REAGENDADO",
+            "REAGENDADO_POR_JUNIOR",
+            "REAGENDADO_PELO_CLIENTE"
+        ];
+
+        if (!statusPermitidos.includes(pedido.status)) {
+            throw new AppError(
+                "Somente atendimentos confirmados podem ser reagendados.",
+                409
+            );
+        }
+
+        let dataAtual = pedido.dataPreferida;
+        let turnoAtual = pedido.turnoPreferido;
+
+        if (pedido.reagendamentos.length > 0) {
+            dataAtual = pedido.reagendamentos[0].novaData;
+            turnoAtual = pedido.reagendamentos[0].novoTurno;
+        }
+
+        if (
+            dados.novaData === dataAtual &&
+            dados.novoTurno === turnoAtual
+        ) {
+            throw new AppError(
+                "A nova data e o turno devem alterar o agendamento atual.",
+                400
+            );
+        }
+
+        return pedidoRepository.reagendarPedido(
+            id,
+            administradorId,
+            dados,
+            pedido.status,
+            pedido.atualizadoEm
+        );
+    }
+
+    async cancelarPedido(id, motivo, administradorId) {
+        let observacao = "Pedido cancelado pelo administrador.";
+
+        if (motivo) {
+            observacao += ` Motivo: ${motivo}`;
+        }
+
+        return pedidoRepository.transicionarPedidoAdministrativamente(
+            id,
+            administradorId,
+            [
+                "PENDENTE",
+                "ACEITO_POR_JUNIOR",
+                "AGUARDANDO_CLIENTE",
+                "EM_NEGOCIACAO",
+                "CONFIRMADO",
+                "REAGENDADO",
+                "REAGENDADO_POR_JUNIOR",
+                "REAGENDADO_PELO_CLIENTE"
+            ],
+            "CANCELADO",
+            observacao,
+            true
+        );
+    }
+
+    async concluirPedido(id, administradorId) {
+        return pedidoRepository.transicionarPedidoAdministrativamente(
+            id,
+            administradorId,
+            [
+                "CONFIRMADO",
+                "REAGENDADO",
+                "REAGENDADO_POR_JUNIOR",
+                "REAGENDADO_PELO_CLIENTE"
+            ],
+            "CONCLUIDO",
+            "Atendimento concluído pelo administrador."
+        );
     }
 
     async gerarLinkWhatsappProposta(id) {

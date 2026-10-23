@@ -101,7 +101,7 @@ const buscarPorId = async (id) => {
 
 // Lista os pedidos para o painel administrativo.
 // Permite filtrar por status e navegar entre páginas.
-const listarPedidos = async ({ page, limit, status }) => {
+const listarPedidos = async ({ page, limit, status }, descartados = false) => {
 
     // 1. PREPARAR OS FILTROS
 
@@ -111,6 +111,12 @@ const listarPedidos = async ({ page, limit, status }) => {
     const where = {
         descartadoEm: null
     };
+
+    if (descartados) {
+        where.descartadoEm = {
+            not: null
+        };
+    }
 
     // Se o administrador informou um status,
     // adicionamos esse filtro à consulta.
@@ -383,6 +389,179 @@ const buscarDadosParaEnvioManualProposta = async (id) => {
                 }
             }
         }
+    });
+};
+
+const buscarDadosParaReagendar = async (id) => {
+    return prisma.pedido.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            status: true,
+            descartadoEm: true,
+            dataPreferida: true,
+            turnoPreferido: true,
+            atualizadoEm: true,
+            reagendamentos: {
+                where: {
+                    aceito: true
+                },
+                orderBy: [
+                    { criadoEm: "desc" },
+                    { id: "desc" }
+                ],
+                take: 1,
+                select: {
+                    novaData: true,
+                    novoTurno: true
+                }
+            }
+        }
+    });
+};
+
+const reagendarPedido = async (
+    id,
+    administradorId,
+    dados,
+    statusAtual,
+    atualizadoEm
+) => {
+    return prisma.$transaction(async (tx) => {
+        const resultado = await tx.pedido.updateMany({
+            where: {
+                id,
+                status: statusAtual,
+                descartadoEm: null,
+                atualizadoEm
+            },
+            data: {
+                status: "REAGENDADO_POR_JUNIOR"
+            }
+        });
+
+        if (resultado.count !== 1) {
+            throw new AppError(
+                "O pedido mudou ou não está mais disponível para reagendamento.",
+                409
+            );
+        }
+
+        const reagendamento = await tx.reagendamento.create({
+            data: {
+                pedidoId: id,
+                novaData: dados.novaData,
+                novoTurno: dados.novoTurno,
+                motivo: dados.motivo,
+                aceito: true
+            },
+            select: {
+                id: true,
+                novaData: true,
+                novoTurno: true,
+                motivo: true,
+                aceito: true,
+                criadoEm: true
+            }
+        });
+
+        let observacao = "Atendimento reagendado por Júnior.";
+
+        if (dados.motivo) {
+            observacao += ` Motivo: ${dados.motivo}`;
+        }
+
+        await tx.historicoStatus.create({
+            data: {
+                pedidoId: id,
+                administradorId,
+                statusAnterior: statusAtual,
+                statusNovo: "REAGENDADO_POR_JUNIOR",
+                observacao
+            }
+        });
+
+        return {
+            status: "REAGENDADO_POR_JUNIOR",
+            reagendamento
+        };
+    });
+};
+
+const transicionarPedidoAdministrativamente = async (
+    id,
+    administradorId,
+    statusPermitidos,
+    statusNovo,
+    observacao,
+    descartar = false
+) => {
+    return prisma.$transaction(async (tx) => {
+        const pedido = await tx.pedido.findUnique({
+            where: { id },
+            select: {
+                status: true,
+                descartadoEm: true
+            }
+        });
+
+        if (!pedido) {
+            throw new AppError("Pedido não encontrado.", 404);
+        }
+
+        if (
+            pedido.descartadoEm !== null ||
+            !statusPermitidos.includes(pedido.status)
+        ) {
+            throw new AppError(
+                "A operação não é permitida para o status atual do pedido.",
+                409
+            );
+        }
+
+        const agora = descartar ? new Date() : null;
+        const dados = {
+            status: statusNovo
+        };
+
+        if (descartar) {
+            dados.descartadoEm = agora;
+        }
+
+        const resultado = await tx.pedido.updateMany({
+            where: {
+                id,
+                status: pedido.status,
+                descartadoEm: null
+            },
+            data: dados
+        });
+
+        if (resultado.count !== 1) {
+            throw new AppError(
+                "O pedido mudou durante a operação. Atualize os dados e tente novamente.",
+                409
+            );
+        }
+
+        const historico = await tx.historicoStatus.create({
+            data: {
+                pedidoId: id,
+                administradorId,
+                statusAnterior: pedido.status,
+                statusNovo,
+                observacao
+            },
+            select: {
+                criadoEm: true
+            }
+        });
+
+        return {
+            status: statusNovo,
+            descartadoEm: agora,
+            registradoEm: historico.criadoEm
+        };
     });
 };
 
@@ -720,6 +899,9 @@ export default {
     buscarDadosParaProposta,
     buscarServicoAtivoPorId,
     buscarDadosParaEnvioManualProposta,
+    buscarDadosParaReagendar,
+    reagendarPedido,
+    transicionarPedidoAdministrativamente,
     registrarEnvioManualProposta,
     registrarRespostaCliente,
     salvarProposta
