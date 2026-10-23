@@ -13,6 +13,19 @@ const listarCidades = async (req, res, next) => {
     }
 };
 
+const listarTodasCidades = async (req, res, next) => {
+    try {
+        const cidades = await cidadeService.listarTodasCidades();
+
+        return res.status(200).json({
+            mensagem: "Cidades administrativas listadas com sucesso.",
+            cidades
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 const cadastrarCidades = async (req, res, next) => {
     try {
         const { nome, nivel, regiao } = req.body;
@@ -86,6 +99,7 @@ const editarCidade = async (req, res, next) => {
 
 export default {
     listarCidades,
+    listarTodasCidades,
     cadastrarCidades,
     desativarCidade,
     reativarCidade,

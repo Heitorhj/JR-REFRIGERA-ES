@@ -9,6 +9,10 @@ class cidadeService {
         return cidades;
     }
 
+    async listarTodasCidades() {
+        return cidadeRepository.listarTodas();
+    }
+
     async cadastrarCidade(nome, nivel, regiao) {
         // Verifica se a cidade já está cadastrada
         const cidadeExistente = await cidadeRepository.buscarPorNome(nome);

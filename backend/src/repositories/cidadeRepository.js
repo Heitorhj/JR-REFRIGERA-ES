@@ -10,6 +10,27 @@ const listarCidadesAtivas = async () => {
             nome: true,
             nivel: true,
             regiao: true,
+            ativa: true,
+            taxaDeslocamento: {
+                select: {
+                    valor: true
+                }
+            }
+        },
+        orderBy: {
+            nome: "asc"
+        }
+    });
+};
+
+const listarTodas = async () => {
+    return prisma.cidade.findMany({
+        select: {
+            id: true,
+            nome: true,
+            nivel: true,
+            regiao: true,
+            ativa: true,
             taxaDeslocamento: {
                 select: {
                     valor: true
@@ -138,6 +159,7 @@ const editarCidade = async (id, dados) => {
 
 export default {
     listarCidadesAtivas,
+    listarTodas,
     buscarPorNome,
     buscarPorId,
     cadastrarCidade,
