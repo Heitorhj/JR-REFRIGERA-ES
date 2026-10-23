@@ -13,8 +13,8 @@ class PedidoService {
         return pedido;
     }
 
-    async listarPedidos(filtros) {
-        const resultado = await pedidoRepository.listarPedidos(filtros);
+    async listarPedidos(filtros, descartados = false) {
+        const resultado = await pedidoRepository.listarPedidos(filtros, descartados);
 
         return {
             pedidos: resultado.pedidos,
@@ -25,6 +25,298 @@ class PedidoService {
                 totalPaginas: Math.ceil(resultado.total / filtros.limit)
             }
         };
+    }
+
+    async listarPedidosDescartados(filtros) {
+        return this.listarPedidos(filtros, true);
+    }
+
+    async reagendarPedido(id, dados, administradorId) {
+        const pedido = await pedidoRepository.buscarDadosParaReagendar(id);
+
+        if (!pedido) {
+            throw new AppError("Pedido não encontrado.", 404);
+        }
+
+        if (pedido.descartadoEm !== null) {
+            throw new AppError("Não é possível reagendar um pedido descartado.", 409);
+        }
+
+        const statusPermitidos = [
+            "CONFIRMADO",
+            "REAGENDADO",
+            "REAGENDADO_POR_JUNIOR",
+            "REAGENDADO_PELO_CLIENTE"
+        ];
+
+        if (!statusPermitidos.includes(pedido.status)) {
+            throw new AppError(
+                "Somente atendimentos confirmados podem ser reagendados.",
+                409
+            );
+        }
+
+        let dataAtual = pedido.dataPreferida;
+        let turnoAtual = pedido.turnoPreferido;
+
+        if (pedido.reagendamentos.length > 0) {
+            dataAtual = pedido.reagendamentos[0].novaData;
+            turnoAtual = pedido.reagendamentos[0].novoTurno;
+        }
+
+        if (
+            dados.novaData === dataAtual &&
+            dados.novoTurno === turnoAtual
+        ) {
+            throw new AppError(
+                "A nova data e o turno devem alterar o agendamento atual.",
+                400
+            );
+        }
+
+        return pedidoRepository.reagendarPedido(
+            id,
+            administradorId,
+            dados,
+            pedido.status,
+            pedido.atualizadoEm
+        );
+    }
+
+    async cancelarPedido(id, motivo, administradorId) {
+        let observacao = "Pedido cancelado pelo administrador.";
+
+        if (motivo) {
+            observacao += ` Motivo: ${motivo}`;
+        }
+
+        return pedidoRepository.transicionarPedidoAdministrativamente(
+            id,
+            administradorId,
+            [
+                "PENDENTE",
+                "ACEITO_POR_JUNIOR",
+                "AGUARDANDO_CLIENTE",
+                "EM_NEGOCIACAO",
+                "CONFIRMADO",
+                "REAGENDADO",
+                "REAGENDADO_POR_JUNIOR",
+                "REAGENDADO_PELO_CLIENTE"
+            ],
+            "CANCELADO",
+            observacao,
+            true
+        );
+    }
+
+    async concluirPedido(id, administradorId) {
+        return pedidoRepository.transicionarPedidoAdministrativamente(
+            id,
+            administradorId,
+            [
+                "CONFIRMADO",
+                "REAGENDADO",
+                "REAGENDADO_POR_JUNIOR",
+                "REAGENDADO_PELO_CLIENTE"
+            ],
+            "CONCLUIDO",
+            "Atendimento concluído pelo administrador."
+        );
+    }
+
+    async gerarLinkWhatsappProposta(id) {
+        const pedido = await pedidoRepository.buscarDadosParaEnvioManualProposta(id);
+
+        if (!pedido) {
+            throw new AppError("Pedido não encontrado.", 404);
+        }
+
+        if (pedido.descartadoEm !== null) {
+            throw new AppError("Não é possível enviar proposta de pedido descartado.", 409);
+        }
+
+        if (pedido.status !== "ACEITO_POR_JUNIOR") {
+            throw new AppError("Salve a proposta antes de abrir o WhatsApp para enviá-la.", 409);
+        }
+
+        if (
+            !Number.isSafeInteger(pedido.valorPrevisto) ||
+            pedido.valorPrevisto <= 0 ||
+            !Number.isSafeInteger(pedido.taxaDeslocamentoFinal) ||
+            pedido.taxaDeslocamentoFinal < 0
+        ) {
+            throw new AppError("A proposta está incompleta e não pode ser enviada.", 409);
+        }
+
+        // WhatsApp click-to-chat accepts digits only in its phone path.
+        let telefone = "";
+        for (const caractere of pedido.cliente.whatsapp) {
+            if (caractere >= "0" && caractere <= "9") {
+                telefone += caractere;
+            }
+        }
+
+        if (
+            !telefone.startsWith("55") ||
+            (telefone.length !== 12 && telefone.length !== 13)
+        ) {
+            throw new AppError("O WhatsApp cadastrado para o cliente é inválido.", 409);
+        }
+
+        const nomeCliente = pedido.cliente.nome.trim().split(" ")[0];
+        const formatadorMoeda = new Intl.NumberFormat("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+        });
+        const total = pedido.valorPrevisto + pedido.taxaDeslocamentoFinal;
+
+        if (!Number.isSafeInteger(total)) {
+            throw new AppError("O total da proposta é inválido.", 409);
+        }
+
+        const data = pedido.dataPreferida.split("-");
+
+        const dataFormatada = `${data[2]}/${data[1]}/${data[0]}`;
+        let mensagem = `Olá, ${nomeCliente}! Aqui é o Júnior da JR Refrigerações.\n`;
+        mensagem += `Preparei a proposta para o serviço de ${pedido.servico.nome}:\n`;
+        mensagem += `• Serviço: ${formatadorMoeda.format(pedido.valorPrevisto / 100)}\n`;
+        mensagem += `• Deslocamento: ${formatadorMoeda.format(pedido.taxaDeslocamentoFinal / 100)}\n`;
+        mensagem += `• Total: ${formatadorMoeda.format(total / 100)}\n`;
+
+        if (pedido.reagendamentos.length > 0) {
+            const reagendamento = pedido.reagendamentos[0];
+            const dataReagendada = reagendamento.novaData.split("-");
+            let turnoReagendado = "tarde";
+
+            if (reagendamento.novoTurno === "MANHA") {
+                turnoReagendado = "manhã";
+            }
+
+            let turnoOriginal = "tarde";
+
+            if (pedido.turnoPreferido === "MANHA") {
+                turnoOriginal = "manhã";
+            }
+
+            const dataOriginalIgual = reagendamento.novaData === pedido.dataPreferida;
+            const turnoOriginalIgual = reagendamento.novoTurno === pedido.turnoPreferido;
+
+            if (!dataOriginalIgual || !turnoOriginalIgual) {
+                mensagem += `• Solicitado originalmente: ${dataFormatada} (${turnoOriginal})\n`;
+                mensagem += "• A proposta sugere alterar o dia ou turno do atendimento.\n";
+            }
+
+            mensagem += `• Data proposta: ${dataReagendada[2]}/${dataReagendada[1]}/${dataReagendada[0]} (${turnoReagendado})\n`;
+        } else {
+            let turnoSolicitado = "tarde";
+
+            if (pedido.turnoPreferido === "MANHA") {
+                turnoSolicitado = "manhã";
+            }
+
+            mensagem += `• Data solicitada: ${dataFormatada} (${turnoSolicitado})\n`;
+        }
+
+        mensagem += "\nPor favor, confirme se aceita o valor e a data proposta. Se precisar negociar, responda a esta mensagem.";
+
+        return {
+            url: `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`,
+            mensagem,
+            envioConfirmado: false
+        };
+    }
+
+    async informarEnvioManualProposta(id, administradorId) {
+        const pedido = await pedidoRepository.buscarDadosParaEnvioManualProposta(id);
+
+        if (!pedido) {
+            throw new AppError("Pedido não encontrado.", 404);
+        }
+
+        if (pedido.descartadoEm !== null) {
+            throw new AppError("Não é possível registrar envio de pedido descartado.", 409);
+        }
+
+        if (pedido.status !== "ACEITO_POR_JUNIOR") {
+            throw new AppError("Somente uma proposta salva pode ser marcada como enviada.", 409);
+        }
+
+        if (
+            !Number.isSafeInteger(pedido.valorPrevisto) ||
+            pedido.valorPrevisto <= 0 ||
+            !Number.isSafeInteger(pedido.taxaDeslocamentoFinal) ||
+            pedido.taxaDeslocamentoFinal < 0
+        ) {
+            throw new AppError("A proposta está incompleta e não pode ser marcada como enviada.", 409);
+        }
+
+        const registro = await pedidoRepository.registrarEnvioManualProposta(
+            id,
+            administradorId
+        );
+
+        return {
+            status: "AGUARDANDO_CLIENTE",
+            envioInformadoManualmente: true,
+            entregaConfirmadaPeloWhatsApp: false,
+            registradoEm: registro.criadoEm
+        };
+    }
+
+    async registrarRespostaCliente(id, resposta, administradorId) {
+        const pedido = await pedidoRepository.buscarDadosParaEnvioManualProposta(id);
+
+        if (!pedido) {
+            throw new AppError("Pedido não encontrado.", 404);
+        }
+
+        if (pedido.descartadoEm !== null) {
+            throw new AppError("Não é possível registrar resposta de pedido descartado.", 409);
+        }
+
+        const statusAguardandoResposta = pedido.status === "AGUARDANDO_CLIENTE";
+        const statusEmNegociacao = pedido.status === "EM_NEGOCIACAO";
+
+        if (!statusAguardandoResposta && !statusEmNegociacao) {
+            throw new AppError("A resposta só pode ser registrada após informar o envio da proposta.", 409);
+        }
+
+        let novoStatus = "";
+
+        if (resposta.acao === "ACEITAR") {
+            if (
+                !Number.isSafeInteger(pedido.valorPrevisto) ||
+                pedido.valorPrevisto <= 0 ||
+                !Number.isSafeInteger(pedido.taxaDeslocamentoFinal) ||
+                pedido.taxaDeslocamentoFinal < 0
+            ) {
+                throw new AppError("A proposta está incompleta e não pode ser confirmada.", 409);
+            }
+
+            novoStatus = "CONFIRMADO";
+        } else if (resposta.acao === "NEGOCIAR") {
+            if (!statusAguardandoResposta) {
+                throw new AppError("O pedido já está em negociação.", 409);
+            }
+
+            novoStatus = "EM_NEGOCIACAO";
+        } else if (
+            resposta.acao === "RECUSAR_PROPOSTA" ||
+            resposta.acao === "CANCELAR"
+        ) {
+            novoStatus = "CANCELADO";
+        } else {
+            throw new AppError("Ação de resposta inválida.", 400);
+        }
+
+        return pedidoRepository.registrarRespostaCliente(
+            id,
+            administradorId,
+            resposta.acao,
+            resposta.observacao,
+            pedido.status,
+            novoStatus
+        );
     }
 
     async cadastrarPedido(dados) {
