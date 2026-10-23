@@ -25,4 +25,11 @@ adminPedidoRoutes.get(
     pedidoController.listarPedidos
 );
 
+adminPedidoRoutes.get(
+    "/:id",
+    loginRequired,
+    pedidoValidator.validarBuscaPorId,
+    pedidoController.buscarPorId
+);
+
 export { pedidoRoutes, adminPedidoRoutes };

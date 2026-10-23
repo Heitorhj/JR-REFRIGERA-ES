@@ -33,7 +33,18 @@ const listarPedidos = async (req, res, next) => {
     }
 };
 
+const buscarPorId = async (req, res, next) => {
+    try {
+        const pedido = await pedidoService.buscarPorId(req.params.id);
+
+        return res.status(200).json({ pedido });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 export default {
     listarPedidos,
+    buscarPorId,
     cadastrarPedido
 };

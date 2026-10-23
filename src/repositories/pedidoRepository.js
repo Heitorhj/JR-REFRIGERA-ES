@@ -23,6 +23,81 @@ const buscarServicoPorId = async (id) => {
     });
 };
 
+// Busca os dados necessários para o atendimento administrativo,
+// selecionando campos específicos para não expor dados sensíveis.
+const buscarPorId = async (id) => {
+    return prisma.pedido.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            status: true,
+            endereco: true,
+            descricaoProblema: true,
+            dataPreferida: true,
+            turnoPreferido: true,
+            valorPrevisto: true,
+            taxaDeslocamentoEstimada: true,
+            taxaDeslocamentoFinal: true,
+            criadoEm: true,
+            atualizadoEm: true,
+            // Relation selects return only customer contact and service-area
+            // details needed for support; they do not expose credentials.
+            cliente: {
+                select: {
+                    nome: true,
+                    whatsapp: true
+                }
+            },
+            cidade: {
+                select: {
+                    nome: true,
+                    regiao: true,
+                    nivel: true
+                }
+            },
+            servico: {
+                select: {
+                    nome: true,
+                    descricao: true
+                }
+            },
+            // Ascending timestamps show the status history in event order.
+            // ID is a stable tie-breaker when two events share a timestamp.
+            historicos: {
+                orderBy: [
+                    { criadoEm: "asc" },
+                    { id: "asc" }
+                ],
+                select: {
+                    criadoEm: true,
+                    statusAnterior: true,
+                    statusNovo: true,
+                    observacao: true,
+                    administrador: {
+                        select: {
+                            nome: true
+                        }
+                    }
+                }
+            },
+            // Reagendamentos follow the same chronological ordering as history.
+            reagendamentos: {
+                orderBy: [
+                    { criadoEm: "asc" },
+                    { id: "asc" }
+                ],
+                select: {
+                    novaData: true,
+                    novoTurno: true,
+                    motivo: true,
+                    aceito: true,
+                    criadoEm: true
+                }
+            }
+        }
+    });
+};
+
 // Lista os pedidos para o painel administrativo.
 // Permite filtrar por status e navegar entre páginas.
 const listarPedidos = async ({ page, limit, status }) => {
@@ -215,6 +290,7 @@ const criarPedido = async (dados) => {
 export default {
     buscarCidadePorId,
     buscarServicoPorId,
+    buscarPorId,
     listarPedidos,
     criarPedido
 };

@@ -3,6 +3,16 @@ import pedidoRepository from "../repositories/pedidoRepository.js";
 import AppError from "../errors/AppError.js";
 
 class PedidoService {
+    async buscarPorId(id) {
+        const pedido = await pedidoRepository.buscarPorId(id);
+
+        if (!pedido) {
+            throw new AppError("Pedido não encontrado.", 404);
+        }
+
+        return pedido;
+    }
+
     async listarPedidos(filtros) {
         const resultado = await pedidoRepository.listarPedidos(filtros);
 
