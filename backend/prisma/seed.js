@@ -5,13 +5,20 @@ import prisma from "../src/db/prisma.js";
 
 const BCRYPT_ROUNDS = 12;
 
+const taxasDeslocamento = [
+  { nivel: 0, valor: 0 },
+  { nivel: 1, valor: 3000 },
+  { nivel: 2, valor: 5000 },
+  { nivel: 3, valor: 9000 },
+];
+
 const cidades = [
-  { nome: "Recife", nivel: 0, regiao: "Base principal", taxa: 0 },
-  { nome: "Olinda", nivel: 1, regiao: "Região Metropolitana - Nível 1", taxa: 30 },
-  { nome: "Jaboatão dos Guararapes", nivel: 1, regiao: "Região Metropolitana - Nível 1", taxa: 30 },
-  { nome: "Camaragibe", nivel: 2, regiao: "Região Metropolitana - Nível 2", taxa: 50 },
-  { nome: "São Lourenço da Mata", nivel: 2, regiao: "Região Metropolitana - Nível 2", taxa: 50 },
-  { nome: "Carpina", nivel: 3, regiao: "Zona da Mata / Entorno - Nível 3", taxa: 90 },
+  { nome: "Recife", nivel: 0, regiao: "Base principal" },
+  { nome: "Olinda", nivel: 1, regiao: "Região Metropolitana - Nível 1" },
+  { nome: "Jaboatão dos Guararapes", nivel: 1, regiao: "Região Metropolitana - Nível 1" },
+  { nome: "Camaragibe", nivel: 2, regiao: "Região Metropolitana - Nível 2" },
+  { nome: "São Lourenço da Mata", nivel: 2, regiao: "Região Metropolitana - Nível 2" },
+  { nome: "Carpina", nivel: 3, regiao: "Zona da Mata / Entorno - Nível 3" },
 ];
 
 const servicos = [
@@ -45,7 +52,16 @@ async function main() {
     throw new Error("Configure ADMIN_EMAIL e ADMIN_PASSWORD (mínimo 8 caracteres) no .env.");
   }
 
-  // Cadastra cidades sem duplicá-las
+  // Cria as taxas primeiro para que cada cidade possa se relacionar ao nível.
+  for (const taxa of taxasDeslocamento) {
+    await prisma.taxaDeslocamento.upsert({
+      where: { nivel: taxa.nivel },
+      update: {},
+      create: taxa,
+    });
+  }
+
+  // Cadastra cidades sem duplicá-las e associa cada uma à taxa do seu nível.
   for (const cidade of cidades) {
     await prisma.cidade.upsert({
       where: { 
@@ -54,9 +70,10 @@ async function main() {
       update: {},
       create: {
         nome: cidade.nome,
-        nivel: cidade.nivel,
         regiao: cidade.regiao,
-        taxaDeslocamento: Math.round(cidade.taxa * 100),
+        taxaDeslocamento: {
+          connect: { nivel: cidade.nivel },
+        },
       },
     });
   }

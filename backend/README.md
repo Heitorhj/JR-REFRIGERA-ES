@@ -1,119 +1,142 @@
-# JR Refrigerações — API
+# JR Refrigerações — backend
 
-Back-end do sistema web de agendamento, validação de orçamentos e gestão de atendimentos da **JR Refrigerações** (projeto acadêmico — Uninassau, Ciência da Computação, disciplina *Maturidade em Desenvolvimento de Software*).
+API do sistema de agendamento e gestão de atendimentos da JR Refrigerações.
 
-**Stack:** Node.js + Express · SQLite (better-sqlite3) · JWT + bcrypt · express-rate-limit · node-cron · zod
+**Tecnologias:** Node.js, Express, Prisma ORM, SQLite, JWT e bcrypt.
 
-## Como rodar
+## Requisitos
 
-```bash
-npm install
-cp .env.example .env     # ajuste JWT_SECRET e ADMIN_PASSWORD
-npm run seed             # cria tabelas, cidades, serviços e o usuário admin
-npm run dev              # http://localhost:3333
-npm test                 # 42 testes (banco em memória)
+- Node.js e npm.
+- O frontend fica na pasta `../frontend`.
+
+## Configuração e execução
+
+No PowerShell, a partir da raiz do repositório:
+
+```powershell
+Set-Location backend
+npm ci
+Copy-Item .env.example .env
 ```
+
+Edite `backend/.env` e configure ao menos `JWT_SECRET`, `ADMIN_EMAIL` e
+`ADMIN_PASSWORD`. O arquivo de exemplo já define `DATABASE_URL` para um banco
+SQLite local em `backend/data/jr-refrigeracoes.db`.
+
+Gere o Prisma Client, aplique as migrações e crie os dados iniciais:
+
+```powershell
+npx prisma generate
+npx prisma migrate dev
+npm run seed
+```
+
+Inicie a API:
+
+```powershell
+npm run dev
+```
+
+A API ficará disponível em `http://localhost:3333`. Para iniciar o frontend,
+abra outro terminal:
+
+```powershell
+Set-Location frontend
+npm ci
+npm run dev
+```
+
+O frontend usa `http://localhost:5173`, configurado como origem permitida no
+`.env.example` do backend.
+
+## Testes
+
+Com as dependências instaladas e o Prisma Client gerado, execute no diretório
+`backend`:
+
+```powershell
+$env:JWT_SECRET = "chave-temporaria-com-mais-de-32-caracteres"
+npm test
+Remove-Item Env:JWT_SECRET
+```
+
+Os testes usam `node:test`. A chave temporária é necessária porque o módulo de
+autenticação valida `JWT_SECRET` durante a inicialização.
 
 ## Estrutura
 
+```text
+backend/
+  prisma/       schema, migrações e seed inicial
+  src/
+    routes/       definição das rotas HTTP
+    validators/   validação e normalização dos dados
+    controllers/  entrada e resposta HTTP
+    services/     regras de negócio
+    repositories/ acesso ao banco via Prisma
+    middleware/   autenticação
+    jobs/         expurgo periódico de pedidos
+  tests/        testes automatizados
 ```
-src/
-  app.js            fábrica do Express (middlewares + rotas)
-  server.js         sobe o servidor e agenda o expurgo
-  config/env.js     variáveis de ambiente
-  db/               schema.sql, conexão e seed
-  middleware/       auth (JWT), rateLimiters, validate (zod), errorHandler
-  routes/           auth, publico, admin
-  services/         pedidos, admin, estados (máquina de estados), whatsapp
-  jobs/expurgo.js   limpeza automática (RF12)
-tests/              testes de integração com node:test
-```
 
-## Endpoints
+O fluxo principal segue `rotas → validadores → controllers → services →
+repositories → Prisma/SQLite`.
 
-Erros seguem `{ "erro": { "codigo", "mensagem", "detalhes?" } }`. Valores monetários em reais (number).
+## Rotas
 
-### Públicos (sem login)
+### Públicas
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/api/saude` | Health check |
-| GET | `/api/servicos` | Catálogo de serviços |
-| GET | `/api/cidades` | Cidades atendidas, nível e taxa estimada |
-| GET | `/api/deslocamento?cidade_id=` | Simulador de deslocamento (origem: Recife) |
-| POST | `/api/pedidos` | Solicita orçamento (RF01/RF02) |
-
-`POST /api/pedidos`:
-
-```json
-{
-  "nome": "Maria da Silva",
-  "whatsapp": "(81) 99999-1234",
-  "cidade_id": 2,
-  "endereco": "Casa Caiada, Rua das Flores 100",
-  "descricao_problema": "Ar-condicionado pingando água.",
-  "servico_id": 3,
-  "data_preferida": "2026-11-05",
-  "turno_preferido": "MANHA"
-}
-```
+| GET | `/api/servicos` | Lista serviços ativos |
+| GET | `/api/cidades` | Lista cidades ativas e suas taxas |
+| POST | `/api/pedidos` | Registra uma solicitação de atendimento |
 
 ### Autenticação
 
 | Método | Rota | Descrição |
 |---|---|---|
-| POST | `/api/auth/login` | `{ email, senha }` → `{ token, usuario }` (RF04) |
-| GET | `/api/auth/me` | Usuário do token |
+| POST | `/api/auth/login` | Autentica o administrador e retorna um token |
+| GET | `/api/auth/me` | Retorna o administrador autenticado |
 
-Rotas privadas exigem `Authorization: Bearer <token>` (RF05, RNF06).
+As rotas administrativas exigem `Authorization: Bearer <token>`.
 
-### Painel administrativo (`/api/admin`, exige JWT)
+### Administração
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/resumo` | Contagem de pedidos por estado |
-| GET | `/pedidos?status=&pagina=&limite=` | Lista (oculta CANCELADO/RECUSADO se não filtrar) |
-| GET | `/pedidos/:id` | Detalhe + histórico + transições permitidas |
-| PATCH | `/pedidos/:id/valores` | `valor_previsto` e/ou `taxa_deslocamento_final` (RF07/RF08) |
-| POST | `/pedidos/:id/reagendar` | `{ nova_data, novo_turno, motivo? }` (RF09) |
-| PATCH | `/pedidos/:id/status` | `{ status, motivo? }` valida a máquina de estados (RF10) |
-| GET | `/pedidos/:id/whatsapp?tipo=` | Mensagem pronta + link `wa.me` (RF11) |
+| GET, POST | `/api/admin/servicos` | Lista todos os serviços e cadastra um serviço |
+| PATCH | `/api/admin/servicos/:id` | Edita um serviço |
+| PATCH | `/api/admin/servicos/:id/desativar` | Desativa um serviço |
+| PATCH | `/api/admin/servicos/:id/reativar` | Reativa um serviço |
+| GET, POST | `/api/admin/cidades` | Lista todas as cidades e cadastra uma cidade |
+| PATCH | `/api/admin/cidades/:id` | Edita uma cidade |
+| PATCH | `/api/admin/cidades/:id/desativar` | Desativa uma cidade |
+| PATCH | `/api/admin/cidades/:id/reativar` | Reativa uma cidade |
+| GET, POST | `/api/admin/taxas-deslocamento` | Lista e cadastra taxas por nível |
+| PATCH | `/api/admin/taxas-deslocamento/:nivel` | Edita a taxa de um nível |
+| GET | `/api/admin/pedidos` | Lista pedidos com paginação e filtros |
+| GET | `/api/admin/pedidos/lixeira` | Lista pedidos descartados |
+| GET | `/api/admin/pedidos/:id` | Consulta os detalhes de um pedido |
+| POST | `/api/admin/pedidos/:id/reagendamentos` | Registra um reagendamento |
+| POST | `/api/admin/pedidos/:id/cancelamento` | Cancela um pedido |
+| POST | `/api/admin/pedidos/:id/conclusao` | Conclui um pedido |
+| PATCH | `/api/admin/pedidos/:id/proposta` | Salva a proposta para o cliente |
+| GET | `/api/admin/pedidos/:id/whatsapp` | Gera um link de mensagem para WhatsApp |
+| POST | `/api/admin/pedidos/:id/proposta/envio` | Registra o envio manual da proposta |
+| POST | `/api/admin/pedidos/:id/resposta` | Registra a resposta do cliente |
 
-Tipos de mensagem: `contato`, `proposta`, `reagendamento`, `confirmacao`, `cancelamento`, `recusa`. Sem `tipo`, usa o padrão do estado atual.
+Os valores de taxas e propostas são armazenados em centavos. A rota de WhatsApp
+prepara o link; o envio da mensagem é feito manualmente pelo administrador.
 
-## Máquina de estados
+## Dados iniciais
 
-```
-PENDENTE ──► ACEITO_POR_JUNIOR ──► CONFIRMADO
-   │               │                   │
-   ├──► REAGENDADO ◄┴───────────────────┘   (REAGENDADO ──► CONFIRMADO)
-   │
-   └──► RECUSADO        ACEITO/REAGENDADO/CONFIRMADO ──► CANCELADO | RECUSADO
-```
+`npm run seed` cadastra cidades, serviços e o administrador definidos em
+`prisma/seed.js`. O seed pode ser executado novamente sem duplicar esses dados;
+se a conta de administrador já existir, a senha não é substituída.
 
-`CANCELADO` e `RECUSADO` são finais: não aceitam mais alterações e entram na área de descarte.
+## Expurgo de pedidos
 
-| De | Para |
-|---|---|
-| PENDENTE | ACEITO_POR_JUNIOR, REAGENDADO, RECUSADO |
-| ACEITO_POR_JUNIOR | CONFIRMADO, REAGENDADO, CANCELADO, RECUSADO |
-| REAGENDADO | CONFIRMADO, REAGENDADO, CANCELADO, RECUSADO |
-| CONFIRMADO | REAGENDADO, CANCELADO, RECUSADO |
-
-Para `ACEITO_POR_JUNIOR` e `CONFIRMADO` é obrigatório ter `valor_previsto`. Se a taxa não foi ajustada, a estimativa do sistema é adotada.
-
-## Segurança
-
-- Senhas com **bcrypt** (custo 12); login devolve a mesma resposta para e-mail inexistente e senha errada.
-- **JWT** HS256 com expiração; o middleware valida assinatura, algoritmo, validade e existência do usuário.
-- **Rate limiting**: geral (100/15 min), login (5 falhas/15 min) e formulário público (10/hora) — configuráveis no `.env`.
-- `helmet`, CORS restrito ao front-end, limite de 10 kb no corpo, validação de entrada com zod e consultas SQL parametrizadas.
-- Em produção o servidor se recusa a subir sem `JWT_SECRET` forte (32+ caracteres).
-
-## Expurgo (RF12)
-
-Pedidos `CANCELADO`/`RECUSADO` recebem `descartado_em`. O job (`node-cron`, 03:00 America/Recife, e uma varredura ao iniciar) apaga os que passaram de `RETENCAO_DIAS` (padrão 7), junto com histórico e clientes sem outros pedidos.
-
-## Taxas de deslocamento (demonstração)
-
-Definidas no seed por nível da cidade: Recife R$ 0 · Nível 1 R$ 30 · Nível 2 R$ 50 · Nível 3 R$ 90. São valores de exemplo; ajuste em `src/db/seed.js` (ou direto na tabela `cidades`) conforme a realidade do Júnior.
+Pedidos cancelados ou recusados são marcados para descarte. Um job diário remove
+os pedidos após o período definido por `RETENCAO_DIAS` (padrão: 7 dias) e remove
+clientes que não tenham outros pedidos.
