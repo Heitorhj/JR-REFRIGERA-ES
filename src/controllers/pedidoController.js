@@ -43,6 +43,31 @@ const buscarPorId = async (req, res, next) => {
     }
 };
 
+const gerarLinkWhatsappProposta = async (req, res, next) => {
+    try {
+        const resultado = await pedidoService.gerarLinkWhatsappProposta(
+            req.params.id
+        );
+
+        return res.status(200).json(resultado);
+    } catch (error) {
+        return next(error);
+    }
+};
+
+const informarEnvioManualProposta = async (req, res, next) => {
+    try {
+        const resultado = await pedidoService.informarEnvioManualProposta(
+            req.params.id,
+            req.administrador.id
+        );
+
+        return res.status(200).json(resultado);
+    } catch (error) {
+        return next(error);
+    }
+};
+
 
 const salvarProposta = async (req, res, next) => {
     try {
@@ -88,6 +113,8 @@ const salvarProposta = async (req, res, next) => {
 export default {
     listarPedidos,
     buscarPorId,
+    gerarLinkWhatsappProposta,
+    informarEnvioManualProposta,
     cadastrarPedido,
     salvarProposta
 };

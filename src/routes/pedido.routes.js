@@ -32,12 +32,27 @@ adminPedidoRoutes.get(
     pedidoController.buscarPorId
 );
 
+// Opens a manually prepared message; generating this URL does not record sending.
+adminPedidoRoutes.get(
+    "/:id/whatsapp",
+    loginRequired,
+    pedidoValidator.validarBuscaPorId,
+    pedidoController.gerarLinkWhatsappProposta
+);
 
 adminPedidoRoutes.patch(
     "/:id/proposta",
     loginRequired,
     pedidoValidator.validarProposta,
     pedidoController.salvarProposta
+);
+
+// Júnior calls this only after manually sending the message in WhatsApp.
+adminPedidoRoutes.post(
+    "/:id/proposta/envio",
+    loginRequired,
+    pedidoValidator.validarBuscaPorId,
+    pedidoController.informarEnvioManualProposta
 );
 
 export { pedidoRoutes, adminPedidoRoutes };

@@ -345,6 +345,92 @@ const buscarServicoAtivoPorId = async (id) => {
     });
 };
 
+// Loads only saved proposal and recipient data needed to open WhatsApp.
+const buscarDadosParaEnvioManualProposta = async (id) => {
+    return prisma.pedido.findUnique({
+        where: { id },
+        select: {
+            id: true,
+            status: true,
+            descartadoEm: true,
+            dataPreferida: true,
+            turnoPreferido: true,
+            valorPrevisto: true,
+            taxaDeslocamentoFinal: true,
+            cliente: {
+                select: {
+                    nome: true,
+                    whatsapp: true
+                }
+            },
+            servico: {
+                select: {
+                    nome: true
+                }
+            },
+            reagendamentos: {
+                where: {
+                    aceito: null
+                },
+                orderBy: [
+                    { criadoEm: "desc" },
+                    { id: "desc" }
+                ],
+                take: 1,
+                select: {
+                    novaData: true,
+                    novoTurno: true
+                }
+            }
+        }
+    });
+};
+
+// Records the administrator's manual send confirmation atomically with
+// the status change, allowing only the first transition from this status.
+const registrarEnvioManualProposta = async (id, administradorId) => {
+    return prisma.$transaction(async (tx) => {
+        const resultado = await tx.pedido.updateMany({
+            where: {
+                id,
+                status: "ACEITO_POR_JUNIOR",
+                descartadoEm: null,
+                valorPrevisto: {
+                    not: null
+                },
+                taxaDeslocamentoFinal: {
+                    not: null
+                }
+            },
+            data: {
+                status: "AGUARDANDO_CLIENTE"
+            }
+        });
+
+        if (resultado.count !== 1) {
+            throw new AppError(
+                "O pedido mudou ou não está mais disponível para registrar o envio.",
+                409
+            );
+        }
+
+        const historico = await tx.historicoStatus.create({
+            data: {
+                pedidoId: id,
+                administradorId,
+                statusAnterior: "ACEITO_POR_JUNIOR",
+                statusNovo: "AGUARDANDO_CLIENTE",
+                observacao: "Envio da proposta informado manualmente pelo administrador."
+            },
+            select: {
+                criadoEm: true
+            }
+        });
+
+        return historico;
+    });
+};
+
 
 // Salva a proposta de orçamento de um pedido pendente.
 // Atualiza o serviço, o valor previsto e a taxa final.
@@ -560,5 +646,7 @@ export default {
     // Métodos utilizados na proposta de orçamento.
     buscarDadosParaProposta,
     buscarServicoAtivoPorId,
+    buscarDadosParaEnvioManualProposta,
+    registrarEnvioManualProposta,
     salvarProposta
 };
